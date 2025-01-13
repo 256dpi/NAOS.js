@@ -452,13 +452,14 @@ async function $189005054305d286$export$552bfb764b5cd2b4(session, file, data, re
     // send "create" command (create & truncate)
     let cmd = (0, $fab42eb3dee39b5b$export$2a703dbb0cb35339)("oos", 2, 5, file);
     await $189005054305d286$var$send(session, cmd, true);
-    // TODO: Dynamically determine channel MTU?
-    // write data in 500-byte chunks
+    // get MTU
+    let mtu = await session.getMTU();
+    // write data in chunks
     let num = 0;
     let offset = 0;
     while(offset < data.byteLength){
         // determine chunk size and chunk data
-        let chunkSize = Math.min(500, data.byteLength - offset);
+        let chunkSize = Math.min(mtu, data.byteLength - offset);
         let chunkData = data.slice(offset, offset + chunkSize);
         // determine mode
         let acked = num % 10 === 0;
@@ -590,6 +591,7 @@ let $5f0bc7af558cc661$export$96e9906d6d93a972;
     Status[Status["locked"] = 1] = "locked";
 })($5f0bc7af558cc661$export$96e9906d6d93a972 || ($5f0bc7af558cc661$export$96e9906d6d93a972 = {}));
 class $5f0bc7af558cc661$export$1fb4852a55678982 {
+    mtu = 0;
     static async open(ch) {
         // prepare queue
         const queue = new (0, $99f74415292121e0$export$3dc07afe418952bc)();
@@ -615,7 +617,7 @@ class $5f0bc7af558cc661$export$1fb4852a55678982 {
         this.ch = ch;
         this.qu = qu;
     }
-    async ping(timeout) {
+    async ping(timeout = 5000) {
         // write command
         await (0, $99f74415292121e0$export$68d8715fc104d294)(this.ch, new (0, $99f74415292121e0$export$f69c19e57285b83a)(this.id, 0xfe, null));
         // read reply
@@ -624,7 +626,7 @@ class $5f0bc7af558cc661$export$1fb4852a55678982 {
         if (msg.endpoint !== 0xfe || msg.size() !== 1) throw new Error("invalid message");
         else if (msg.data[0] !== 1) throw new Error("session error: " + msg.data[0]);
     }
-    async query(endpoint, timeout) {
+    async query(endpoint, timeout = 5000) {
         // write command
         await (0, $99f74415292121e0$export$68d8715fc104d294)(this.ch, new (0, $99f74415292121e0$export$f69c19e57285b83a)(this.id, endpoint, null));
         // read reply
@@ -633,7 +635,7 @@ class $5f0bc7af558cc661$export$1fb4852a55678982 {
         if (msg.endpoint !== 0xfe || msg.data.byteLength !== 1) throw new Error("invalid message");
         return msg.data[0] === 1;
     }
-    async receive(endpoint, expectAck, timeout) {
+    async receive(endpoint, expectAck, timeout = 5000) {
         // await message
         const msg = await this.read(timeout);
         // handle ack
@@ -668,7 +670,7 @@ class $5f0bc7af558cc661$export$1fb4852a55678982 {
         if (msg.data.byteLength !== 1 || msg.endpoint !== 0xfe) throw new Error("invalid message");
         else if (msg.data[0] !== 1) throw $5f0bc7af558cc661$var$parseError(msg.data[0]);
     }
-    async status(timeout) {
+    async status(timeout = 5000) {
         // write command
         let cmd = (0, $fab42eb3dee39b5b$export$2a703dbb0cb35339)("o", 0);
         await this.send(0xfd, cmd, 0);
@@ -680,7 +682,7 @@ class $5f0bc7af558cc661$export$1fb4852a55678982 {
         let status = (0, $fab42eb3dee39b5b$export$417857010dc9287f)("o", reply)[0];
         return status;
     }
-    async unlock(password, timeout) {
+    async unlock(password, timeout = 5000) {
         // prepare command
         let cmd = (0, $fab42eb3dee39b5b$export$2a703dbb0cb35339)("os", 1, password);
         await this.send(0xfd, cmd, 0);
@@ -690,7 +692,21 @@ class $5f0bc7af558cc661$export$1fb4852a55678982 {
         if (reply.length !== 1) throw new Error("invalid message");
         return reply[0] === 1;
     }
-    async end(timeout) {
+    async getMTU(timeout = 5000) {
+        // return cached value
+        if (this.mtu > 0) return this.mtu;
+        // write command
+        let cmd = (0, $fab42eb3dee39b5b$export$2a703dbb0cb35339)("o", 2);
+        await this.send(0xfd, cmd, 0);
+        // wait reply
+        const [reply] = await this.receive(0xfd, false, timeout);
+        // verify reply
+        if (reply.length !== 2) throw new Error("invalid message");
+        // cache value
+        this.mtu = (0, $fab42eb3dee39b5b$export$417857010dc9287f)("h", reply)[0];
+        return this.mtu;
+    }
+    async end(timeout = 5000) {
         // write command
         await (0, $99f74415292121e0$export$68d8715fc104d294)(this.ch, new (0, $99f74415292121e0$export$f69c19e57285b83a)(this.id, 0xff, null));
         // read reply
@@ -1294,13 +1310,14 @@ async function $e1163a73e33a3ccf$export$722fbec263ad908a(session, data, report =
     let [reply] = await session.receive($e1163a73e33a3ccf$var$updateEndpoint, false, timeout);
     // verify reply
     if (reply.length !== 1 && reply[0] !== 0) throw new Error("invalid message");
-    // TODO: Dynamically determine channel MTU.
-    // write data in 500-byte chunks
+    // get MTU
+    let mtu = await session.getMTU();
+    // write data in chunks
     let num = 0;
     let offset = 0;
     while(offset < data.length){
         // determine chunks size
-        let chunkSize = Math.min(500, data.length - offset);
+        let chunkSize = Math.min(mtu, data.length - offset);
         let chunkData = data.slice(offset, offset + chunkSize);
         // determine acked
         let acked = num % 10 == 0;
