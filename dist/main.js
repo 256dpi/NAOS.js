@@ -454,6 +454,8 @@ async function $189005054305d286$export$552bfb764b5cd2b4(session, file, data, re
     await $189005054305d286$var$send(session, cmd, true);
     // get MTU
     let mtu = await session.getMTU();
+    // subtract overhead
+    mtu -= 6;
     // write data in chunks
     let num = 0;
     let offset = 0;
@@ -1312,6 +1314,8 @@ async function $e1163a73e33a3ccf$export$722fbec263ad908a(session, data, report =
     if (reply.length !== 1 && reply[0] !== 0) throw new Error("invalid message");
     // get MTU
     let mtu = await session.getMTU();
+    // subtract overhead
+    mtu -= 6;
     // write data in chunks
     let num = 0;
     let offset = 0;
