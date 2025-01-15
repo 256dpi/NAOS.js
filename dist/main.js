@@ -734,7 +734,7 @@ function $5f0bc7af558cc661$var$parseError(num) {
         case 3:
             return new Error("invalid data");
         default:
-            return new Error("expected ack");
+            return new Error("expected ack, got: " + num);
     }
 }
 
