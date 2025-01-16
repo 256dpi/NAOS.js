@@ -1242,10 +1242,7 @@ class $f1b85200f32d8427$export$61b0d7921fd6a089 {
                 while(true){
                     // read data
                     const { done: done , value: value  } = await reader.read();
-                    if (done) {
-                        console.log("done");
-                        break;
-                    }
+                    if (done) break;
                     // Decode the chunk and add it to the buffer
                     buffer += (0, $fab42eb3dee39b5b$export$f84e8e69fd4488a5)(value);
                     // Split the buffer into lines
