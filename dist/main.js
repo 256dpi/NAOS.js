@@ -227,9 +227,11 @@ async function $aa9ad2c21d2bf2d7$export$4d11934c049ffae2(s, key, timeout = 5000)
     const batch = reply[21] | reply[22] << 8;
     const date = reply[23] | reply[24] << 8 | reply[25] << 16 | reply[26] << 24;
     const signature = reply.slice(27, 32);
-    // verify signature
-    const expectedSignature = await (0, $fab42eb3dee39b5b$export$e10eb67e19628714)(key, reply.slice(0, 27));
-    if ((0, $fab42eb3dee39b5b$export$398604a469f7de9a)(expectedSignature, signature)) throw new Error("invalid signature");
+    // verify signature if a key is provided
+    if (key) {
+        const expectedSignature = await (0, $fab42eb3dee39b5b$export$e10eb67e19628714)(key, reply.slice(0, 27));
+        if ((0, $fab42eb3dee39b5b$export$398604a469f7de9a)(expectedSignature, signature)) throw new Error("invalid signature");
+    }
     return {
         uuid: uuid,
         product: product,
