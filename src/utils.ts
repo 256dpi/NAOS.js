@@ -39,6 +39,29 @@ export function random(length: number): string {
   return result;
 }
 
+export function securerRandom(length: number): Uint8Array {
+  return window.crypto.getRandomValues(new Uint8Array(length));
+}
+
+export async function hmac256(
+  key: Uint8Array,
+  challenge: Uint8Array
+): Promise<Uint8Array> {
+  // import HMAC key
+  const cryptoKey = await window.crypto.subtle.importKey(
+    "raw",
+    key,
+    { name: "HMAC", hash: { name: "SHA-256" } },
+    false,
+    ["sign"]
+  );
+
+  // generate the HMAC
+  const res = await window.crypto.subtle.sign("HMAC", cryptoKey, challenge);
+
+  return new Uint8Array(res);
+}
+
 export function requestFile(file: File): Promise<ArrayBuffer> {
   return new Promise((resolve, reject) => {
     const r = new FileReader();
@@ -167,4 +190,23 @@ export function unpack(fmt: string, buffer: Uint8Array): any[] {
   }
 
   return result;
+}
+
+export function compare(buf1: Uint8Array, buf2: Uint8Array): boolean {
+  // check lengths
+  if (buf1.byteLength !== buf2.byteLength) {
+    return false;
+  }
+
+  // compare bytes
+  const view1 = new DataView(buf1.buffer);
+  const view2 = new DataView(buf2.buffer);
+  let i = buf1.byteLength;
+  while (i--) {
+    if (view1.getUint8(i) !== view2.getUint8(i)) {
+      return false;
+    }
+  }
+
+  return true;
 }
