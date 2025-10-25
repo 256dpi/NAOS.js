@@ -36,7 +36,8 @@ export class SerialDevice implements Device {
   }
 
   id() {
-    return "serial/" + this.port.getInfo().usbProductId;
+    const info = this.port.getInfo();
+    return `serial/${info.usbProductId ?? "unknown"}`;
   }
 
   async open(): Promise<Channel> {
@@ -119,11 +120,11 @@ export class SerialDevice implements Device {
         await writer.write(toBase64(data));
         await writer.write(toBuffer("\n"));
       },
-      close: () => {
-        writer.close();
+      close: async () => {
+        await writer.close();
         writer.releaseLock();
-        reader.cancel();
-        reader.releaseLock();
+        await reader.cancel();
+        // lock released by reader
         this.ch = null;
       },
     };

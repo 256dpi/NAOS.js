@@ -429,7 +429,7 @@ class $9224a2c5eeae1672$export$926ab273976713de {
             write: async (data)=>{
                 await this.char.writeValueWithoutResponse(data);
             },
-            close: ()=>{
+            close: async ()=>{
                 this.char.removeEventListener("characteristicvaluechanged", handler);
                 this.ch = null;
                 closed = true;
@@ -670,7 +670,7 @@ class $d41f8f42b7b1f821$export$a947a71ad4d6575 {
             write: async (data)=>{
                 socket.send(data);
             },
-            close: ()=>{
+            close: async ()=>{
                 socket.close();
                 this.ch = null;
             }
@@ -934,7 +934,7 @@ class $eb2d9580c7f35431$export$86abcda9a311d473 {
         // ignore
         }
         // close channel
-        channel.close();
+        await channel.close();
     }
     async stop() {
         // deactivate
@@ -1286,8 +1286,8 @@ class $668c9db91c0d9266$export$1ff2b8f5c3b1fa7d {
             write: async (data)=>{
                 await $668c9db91c0d9266$export$3893590a1ae926f1(session, this.device, data);
             },
-            close: ()=>{
-                session.end(0);
+            close: async ()=>{
+                await session.end(0);
                 this.ch = null;
             }
         };
@@ -1328,7 +1328,8 @@ class $f1b85200f32d8427$export$61b0d7921fd6a089 {
         });
     }
     id() {
-        return "serial/" + this.port.getInfo().usbProductId;
+        const info = this.port.getInfo();
+        return `serial/${info.usbProductId ?? "unknown"}`;
     }
     async open() {
         // check channel
@@ -1388,11 +1389,11 @@ class $f1b85200f32d8427$export$61b0d7921fd6a089 {
                 await writer.write((0, $fab42eb3dee39b5b$export$37cc283d8fbd3462)(data));
                 await writer.write((0, $fab42eb3dee39b5b$export$fc336dbfaf62f18f)("\n"));
             },
-            close: ()=>{
-                writer.close();
+            close: async ()=>{
+                await writer.close();
                 writer.releaseLock();
-                reader.cancel();
-                reader.releaseLock();
+                await reader.cancel();
+                // lock released by reader
                 this.ch = null;
             }
         };
