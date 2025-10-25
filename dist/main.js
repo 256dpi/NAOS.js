@@ -907,8 +907,12 @@ class $eb2d9580c7f35431$export$86abcda9a311d473 {
                 await fn(this.session);
             } catch (e) {
                 // close session
-                this.session.end(1000).then();
-                this.session = null;
+                try {
+                    this.session.end(1000).then();
+                    this.session = null;
+                } catch (e) {
+                // ignore
+                }
                 // rethrow
                 throw e;
             }
