@@ -1419,7 +1419,7 @@ async function $e1163a73e33a3ccf$export$722fbec263ad908a(session, data, report =
     // get MTU
     let mtu = await session.getMTU();
     // subtract overhead
-    mtu -= 6;
+    mtu -= 2;
     // write data in chunks
     let num = 0;
     let offset = 0;
