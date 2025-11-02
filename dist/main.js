@@ -420,6 +420,9 @@ class $9224a2c5eeae1672$export$926ab273976713de {
             valid: ()=>{
                 return this.dev.gatt.connected && !closed;
             },
+            width () {
+                return 10;
+            },
             subscribe: (q)=>{
                 subscribers.add(q);
             },
@@ -549,6 +552,8 @@ async function $189005054305d286$export$552bfb764b5cd2b4(session, file, data, re
     // send "create" command (create & truncate)
     let cmd = (0, $fab42eb3dee39b5b$export$2a703dbb0cb35339)("oos", 2, 5, file);
     await $189005054305d286$var$send(session, cmd, true);
+    // get width
+    const width = session.channel().width();
     // get MTU
     let mtu = await session.getMTU();
     // subtract overhead
@@ -561,7 +566,7 @@ async function $189005054305d286$export$552bfb764b5cd2b4(session, file, data, re
         let chunkSize = Math.min(mtu, data.byteLength - offset);
         let chunkData = data.slice(offset, offset + chunkSize);
         // determine mode
-        let acked = num % 10 === 0;
+        let acked = num % width === 0;
         // prepare "write" command (acked or silent & sequential)
         cmd = (0, $fab42eb3dee39b5b$export$2a703dbb0cb35339)("ooib", 4, acked ? 0 : 3, offset, chunkData);
         // send "write" command
@@ -661,6 +666,9 @@ class $d41f8f42b7b1f821$export$a947a71ad4d6575 {
             valid () {
                 return true;
             },
+            width () {
+                return 10;
+            },
             subscribe: (q)=>{
                 subscribers.add(q);
             },
@@ -720,6 +728,9 @@ class $5f0bc7af558cc661$export$1fb4852a55678982 {
         this.id = id;
         this.ch = ch;
         this.qu = qu;
+    }
+    channel() {
+        return this.ch;
     }
     async ping(timeout = 5000) {
         // write command
@@ -1277,6 +1288,9 @@ class $668c9db91c0d9266$export$1ff2b8f5c3b1fa7d {
             valid () {
                 return true;
             },
+            width () {
+                return 10;
+            },
             subscribe: (q)=>{
                 subscribers.add(q);
             },
@@ -1378,6 +1392,9 @@ class $f1b85200f32d8427$export$61b0d7921fd6a089 {
             valid () {
                 return true;
             },
+            width () {
+                return 1;
+            },
             subscribe: (q)=>{
                 subscribers.add(q);
             },
@@ -1416,6 +1433,8 @@ async function $e1163a73e33a3ccf$export$722fbec263ad908a(session, data, report =
     let [reply] = await session.receive($e1163a73e33a3ccf$var$updateEndpoint, false, timeout);
     // verify reply
     if (reply.length !== 1 && reply[0] !== 0) throw new Error("invalid message");
+    // get width
+    const width = session.channel().width();
     // get MTU
     let mtu = await session.getMTU();
     // subtract overhead
@@ -1428,7 +1447,7 @@ async function $e1163a73e33a3ccf$export$722fbec263ad908a(session, data, report =
         let chunkSize = Math.min(mtu, data.length - offset);
         let chunkData = data.slice(offset, offset + chunkSize);
         // determine acked
-        let acked = num % 10 == 0;
+        let acked = num % width === 0;
         // send "write" command
         cmd = (0, $fab42eb3dee39b5b$export$2a703dbb0cb35339)("oob", 1, acked ? 1 : 0, chunkData);
         await session.send($e1163a73e33a3ccf$var$updateEndpoint, cmd, acked ? timeout : 0);
