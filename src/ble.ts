@@ -3,11 +3,16 @@ import { Device, Channel, Queue, QueueList } from "./device";
 const svcUUID = "632fba1b-4861-4e4f-8103-ffee9d5033b5";
 const charUUID = "0360744b-a61b-00ad-c945-37f3634130f3";
 
-export async function bleRequest(): Promise<Device | null> {
+export async function bleRequest(bt?: Bluetooth): Promise<Device | null> {
+  // use provided or global bluetooth instance
+  if (!bt) {
+    bt = navigator.bluetooth;
+  }
+
   // request device
   let dev: BluetoothDevice | null;
   try {
-    dev = await navigator.bluetooth.requestDevice({
+    dev = await bt.requestDevice({
       filters: [{ services: [svcUUID] }],
     });
   } catch (err) {
@@ -95,7 +100,7 @@ export class BLEDevice implements Device {
         subscribers.drop(queue);
       },
       write: async (data: Uint8Array) => {
-        await this.char.writeValueWithoutResponse(data);
+        await this.char.writeValueWithoutResponse(data as BufferSource);
       },
       close: async () => {
         this.char.removeEventListener("characteristicvaluechanged", handler);
