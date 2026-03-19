@@ -1489,9 +1489,7 @@ class $f1b85200f32d8427$export$61b0d7921fd6a089 {
                 subscribers.drop(queue);
             },
             write: async (data)=>{
-                await writer.write((0, $fab42eb3dee39b5b$export$fc336dbfaf62f18f)("NAOS!"));
-                await writer.write((0, $fab42eb3dee39b5b$export$37cc283d8fbd3462)(data));
-                await writer.write((0, $fab42eb3dee39b5b$export$fc336dbfaf62f18f)("\n"));
+                await writer.write((0, $fab42eb3dee39b5b$export$ee1b3e54f0441b22)((0, $fab42eb3dee39b5b$export$ee1b3e54f0441b22)((0, $fab42eb3dee39b5b$export$fc336dbfaf62f18f)("NAOS!"), (0, $fab42eb3dee39b5b$export$37cc283d8fbd3462)(data)), (0, $fab42eb3dee39b5b$export$fc336dbfaf62f18f)("\n")));
             },
             close: async ()=>{
                 await writer.close();
