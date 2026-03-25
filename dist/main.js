@@ -32,15 +32,23 @@ function $fab42eb3dee39b5b$export$f84e8e69fd4488a5(buffer) {
     return $fab42eb3dee39b5b$var$utf8Dec.decode(buffer);
 }
 function $fab42eb3dee39b5b$export$37cc283d8fbd3462(buffer) {
-    return $fab42eb3dee39b5b$export$fc336dbfaf62f18f(btoa(String.fromCharCode(...new Uint8Array(buffer))));
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+    for(let i = 0; i < bytes.byteLength; i++)binary += String.fromCharCode(bytes[i]);
+    return $fab42eb3dee39b5b$export$fc336dbfaf62f18f(btoa(binary));
 }
 function $fab42eb3dee39b5b$export$c537b38001c583b7(base64) {
     return new Uint8Array(atob(base64).split("").map((c)=>c.charCodeAt(0)));
 }
-function $fab42eb3dee39b5b$export$ee1b3e54f0441b22(buf1, buf2) {
-    const buf = new Uint8Array(buf1.byteLength + buf2.byteLength);
-    buf.set(buf1, 0);
-    buf.set(buf2, buf1.byteLength);
+function $fab42eb3dee39b5b$export$ee1b3e54f0441b22(...parts) {
+    let size = 0;
+    for (const p of parts)size += p.byteLength;
+    const buf = new Uint8Array(size);
+    let offset = 0;
+    for (const p of parts){
+        buf.set(p, offset);
+        offset += p.byteLength;
+    }
     return buf;
 }
 function $fab42eb3dee39b5b$export$4385e60b38654f68(length) {
@@ -1443,6 +1451,8 @@ class $f1b85200f32d8427$export$61b0d7921fd6a089 {
         const subscribers = new (0, $99f74415292121e0$export$6b278a59f65cf1eb)();
         // create reader
         const reader = this.port.readable.getReader();
+        // track reader state
+        let alive = true;
         // read data
         const read = async ()=>{
             try {
@@ -1456,9 +1466,13 @@ class $f1b85200f32d8427$export$61b0d7921fd6a089 {
                     // Split the buffer into lines
                     let lines = buffer.split("\n");
                     // Process all complete lines
-                    for(let i = 0; i < lines.length - 1; i++)if (lines[i].startsWith("NAOS!")) {
-                        const data = lines[i].slice(5);
-                        subscribers.dispatch(Uint8Array.from(atob(data), (c)=>c.charCodeAt(0)));
+                    for(let i = 0; i < lines.length - 1; i++){
+                        const line = lines[i].replace(/\r$/, "");
+                        if (line.startsWith("NAOS!")) try {
+                            subscribers.dispatch((0, $fab42eb3dee39b5b$export$c537b38001c583b7)(line.slice(5)));
+                        } catch (err) {
+                            console.error("Error decoding message:", err);
+                        }
                     }
                     // Save the last incomplete line back to the buffer
                     buffer = lines[lines.length - 1];
@@ -1466,6 +1480,7 @@ class $f1b85200f32d8427$export$61b0d7921fd6a089 {
             } catch (err) {
                 console.error("Error reading stream:", err);
             } finally{
+                alive = false;
                 reader.releaseLock();
             }
         };
@@ -1477,7 +1492,7 @@ class $f1b85200f32d8427$export$61b0d7921fd6a089 {
         this.ch = {
             name: ()=>"serial",
             valid () {
-                return true;
+                return alive;
             },
             width () {
                 return 1;
@@ -1489,7 +1504,7 @@ class $f1b85200f32d8427$export$61b0d7921fd6a089 {
                 subscribers.drop(queue);
             },
             write: async (data)=>{
-                await writer.write((0, $fab42eb3dee39b5b$export$ee1b3e54f0441b22)((0, $fab42eb3dee39b5b$export$ee1b3e54f0441b22)((0, $fab42eb3dee39b5b$export$fc336dbfaf62f18f)("NAOS!"), (0, $fab42eb3dee39b5b$export$37cc283d8fbd3462)(data)), (0, $fab42eb3dee39b5b$export$fc336dbfaf62f18f)("\n")));
+                await writer.write((0, $fab42eb3dee39b5b$export$ee1b3e54f0441b22)((0, $fab42eb3dee39b5b$export$fc336dbfaf62f18f)("\nNAOS!"), (0, $fab42eb3dee39b5b$export$37cc283d8fbd3462)(data), (0, $fab42eb3dee39b5b$export$fc336dbfaf62f18f)("\n")));
             },
             close: async ()=>{
                 await writer.close();

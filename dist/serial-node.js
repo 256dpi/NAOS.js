@@ -99,15 +99,23 @@ function $6b0ddb031a0df909$export$f84e8e69fd4488a5(buffer) {
     return $6b0ddb031a0df909$var$utf8Dec.decode(buffer);
 }
 function $6b0ddb031a0df909$export$37cc283d8fbd3462(buffer) {
-    return $6b0ddb031a0df909$export$fc336dbfaf62f18f(btoa(String.fromCharCode(...new Uint8Array(buffer))));
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+    for(let i = 0; i < bytes.byteLength; i++)binary += String.fromCharCode(bytes[i]);
+    return $6b0ddb031a0df909$export$fc336dbfaf62f18f(btoa(binary));
 }
 function $6b0ddb031a0df909$export$c537b38001c583b7(base64) {
     return new Uint8Array(atob(base64).split("").map((c)=>c.charCodeAt(0)));
 }
-function $6b0ddb031a0df909$export$ee1b3e54f0441b22(buf1, buf2) {
-    const buf = new Uint8Array(buf1.byteLength + buf2.byteLength);
-    buf.set(buf1, 0);
-    buf.set(buf2, buf1.byteLength);
+function $6b0ddb031a0df909$export$ee1b3e54f0441b22(...parts) {
+    let size = 0;
+    for (const p of parts)size += p.byteLength;
+    const buf = new Uint8Array(size);
+    let offset = 0;
+    for (const p of parts){
+        buf.set(p, offset);
+        offset += p.byteLength;
+    }
     return buf;
 }
 function $6b0ddb031a0df909$export$4385e60b38654f68(length) {
