@@ -97,6 +97,8 @@ export function pack(fmt: string, ...args: any[]): Uint8Array {
   for (const [index, arg] of args.entries()) {
     switch (fmt.charAt(index)) {
       case "s":
+        size += toBuffer(arg).byteLength;
+        break;
       case "b":
         size += arg.length;
         break;
@@ -119,16 +121,18 @@ export function pack(fmt: string, ...args: any[]): Uint8Array {
 
   // create buffer and view
   const buffer = new Uint8Array(size);
-  const view = new DataView(buffer.buffer);
+  const view = toView(buffer);
 
   // write arguments
   let offset = 0;
   for (const [index, arg] of args.entries()) {
     switch (fmt.charAt(index)) {
-      case "s":
-        buffer.set(toBuffer(arg), offset);
-        offset += arg.length;
+      case "s": {
+        const encoded = toBuffer(arg);
+        buffer.set(encoded, offset);
+        offset += encoded.byteLength;
         break;
+      }
       case "b":
         buffer.set(arg, offset);
         offset += arg.length;
@@ -159,7 +163,7 @@ export function pack(fmt: string, ...args: any[]): Uint8Array {
 
 export function unpack(fmt: string, buffer: Uint8Array): any[] {
   // get view
-  const view = new DataView(buffer.buffer);
+  const view = toView(buffer);
 
   // prepare result
   const result: any[] = [];
@@ -172,7 +176,7 @@ export function unpack(fmt: string, buffer: Uint8Array): any[] {
         let end = buffer.indexOf(0, pos);
         if (end === -1) end = buffer.length;
         result.push(toString(buffer.slice(pos, end)));
-        pos = end;
+        pos = end + 1;
         break;
       }
       case "b": {
@@ -208,6 +212,10 @@ export function unpack(fmt: string, buffer: Uint8Array): any[] {
   return result;
 }
 
+export function toView(buffer: Uint8Array): DataView {
+  return new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+}
+
 export function compare(buf1: Uint8Array, buf2: Uint8Array): boolean {
   // check lengths
   if (buf1.byteLength !== buf2.byteLength) {
@@ -215,11 +223,8 @@ export function compare(buf1: Uint8Array, buf2: Uint8Array): boolean {
   }
 
   // compare bytes
-  const view1 = new DataView(buf1.buffer);
-  const view2 = new DataView(buf2.buffer);
-  let i = buf1.byteLength;
-  while (i--) {
-    if (view1.getUint8(i) !== view2.getUint8(i)) {
+  for (let i = 0; i < buf1.byteLength; i++) {
+    if (buf1[i] !== buf2[i]) {
       return false;
     }
   }

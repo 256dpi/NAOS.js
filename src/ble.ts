@@ -35,10 +35,10 @@ export class BLEDevice implements Device {
     // store device
     this.dev = dev;
 
-    // close open chanel if disconnected
+    // close open channel if disconnected
     this.dev.addEventListener("gattserverdisconnected", () => {
       if (this.ch) {
-        this.ch.close();
+        this.ch.close().catch(() => {});
         this.ch = null;
       }
     });
@@ -73,7 +73,13 @@ export class BLEDevice implements Device {
 
     // prepare handler
     const handler = () => {
-      const data = new Uint8Array(this.char.value.buffer);
+      const value = this.char.value;
+      const data = new Uint8Array(
+        value.buffer.slice(
+          value.byteOffset,
+          value.byteOffset + value.byteLength
+        )
+      );
       subscribers.dispatch(data);
     };
 
@@ -103,9 +109,10 @@ export class BLEDevice implements Device {
         await this.char.writeValueWithoutResponse(data as BufferSource);
       },
       close: async () => {
-        this.char.removeEventListener("characteristicvaluechanged", handler);
-        this.ch = null;
         closed = true;
+        this.char.removeEventListener("characteristicvaluechanged", handler);
+        await this.char.stopNotifications();
+        this.ch = null;
       },
     };
 

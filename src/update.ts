@@ -6,7 +6,7 @@ const updateEndpoint = 0x2;
 export async function update(
   session: Session,
   data: Uint8Array,
-  report: (count: number) => void = null,
+  report?: (count: number) => void,
   timeout: number = 30000
 ) {
   // send "begin" command
@@ -17,8 +17,8 @@ export async function update(
   let [reply] = await session.receive(updateEndpoint, false, timeout);
 
   // verify reply
-  if (reply.length !== 1 && reply[0] !== 0) {
-    throw new Error("invalid message");
+  if (reply.length !== 1 || reply[0] !== 0) {
+    throw new Error("invalid reply");
   }
 
   // get width
@@ -65,7 +65,7 @@ export async function update(
   [reply] = await session.receive(updateEndpoint, false, timeout);
 
   // verify reply
-  if (reply.length !== 1 && reply[0] !== 1) {
-    throw new Error("invalid message");
+  if (reply.length !== 1 || reply[0] !== 1) {
+    throw new Error("invalid reply");
   }
 }

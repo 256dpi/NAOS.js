@@ -1,5 +1,5 @@
 import { Session } from "./session";
-import { compare, hmac256, pack } from "./utils";
+import { compare, hmac256, pack, toView } from "./utils";
 
 const authEndpoint = 0x6;
 
@@ -58,7 +58,7 @@ export async function authProvision(
 
 export async function authDescribe(
   s: Session,
-  key: Uint8Array = undefined,
+  key?: Uint8Array,
   timeout: number = 5000
 ): Promise<AuthData> {
   // send command
@@ -78,18 +78,18 @@ export async function authDescribe(
   }
 
   // parse reply
+  const view = toView(reply);
   const uuid = reply.slice(1, 17);
-  const product = reply[17] | (reply[18] << 8);
-  const revision = reply[19] | (reply[20] << 8);
-  const batch = reply[21] | (reply[22] << 8);
-  const date =
-    reply[23] | (reply[24] << 8) | (reply[25] << 16) | (reply[26] << 24);
+  const product = view.getUint16(17, true);
+  const revision = view.getUint16(19, true);
+  const batch = view.getUint16(21, true);
+  const date = view.getUint32(23, true);
   const signature = reply.slice(27, 32);
 
   // verify signature if a key is provided
   if (key) {
     const expectedSignature = await hmac256(key, reply.slice(0, 27));
-    if (compare(expectedSignature, signature)) {
+    if (!compare(expectedSignature.slice(0, 5), signature)) {
       throw new Error("invalid signature");
     }
   }

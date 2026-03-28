@@ -22,14 +22,14 @@ export async function statPath(
 
   // verify "info" reply
   if (reply.length !== 6 || reply[0] !== 1) {
-    throw new Error("invalid message");
+    throw new Error("invalid reply");
   }
 
   // unpack "info" reply
   const args = unpack("oi", reply.slice(1));
 
   return {
-    name: "",
+    name: path.split("/").pop() || "",
     isDir: args[0] === 1,
     size: args[1],
   };
@@ -55,7 +55,7 @@ export async function listDir(
 
     // verify "info" reply
     if (reply.byteLength < 7 || reply[0] !== 1) {
-      throw new Error("invalid message");
+      throw new Error("invalid reply");
     }
 
     // unpack "info" reply
@@ -64,7 +64,7 @@ export async function listDir(
     // add info
     infos.push({
       name: args[2],
-      isDir: args[0] == 1,
+      isDir: args[0] === 1,
       size: args[1],
     });
   }
@@ -73,10 +73,13 @@ export async function listDir(
 export async function readFile(
   session: Session,
   file: string,
-  report: (count: number) => void = null
+  report?: (count: number) => void
 ): Promise<Uint8Array> {
   // stat file
   const info = await statPath(session, file);
+  if (!info) {
+    throw new Error("file not found");
+  }
 
   // prepare data
   const data = new Uint8Array(info.size);
@@ -113,7 +116,7 @@ export async function readFileRange(
   file: string,
   offset: number,
   length: number,
-  report: (count: number) => void = null
+  report?: (count: number) => void
 ): Promise<Uint8Array> {
   // send "open" command
   let cmd = pack("oos", 2, 0, file);
@@ -138,7 +141,7 @@ export async function readFileRange(
 
     // verify "chunk" reply
     if (reply.byteLength <= 5 || reply[0] !== 2) {
-      throw new Error("invalid message");
+      throw new Error("invalid reply");
     }
 
     // get offset
@@ -146,11 +149,11 @@ export async function readFileRange(
 
     // verify offset
     if (replyOffset !== offset + count) {
-      throw new Error("invalid message");
+      throw new Error("invalid offset");
     }
 
     // append data
-    data.set(new Uint8Array(reply.buffer.slice(5)), count);
+    data.set(reply.slice(5), count);
 
     // increment
     count += reply.byteLength - 5;
@@ -165,14 +168,14 @@ export async function readFileRange(
   cmd = pack("o", 5);
   await send(session, cmd, true);
 
-  return data;
+  return data.slice(0, count);
 }
 
 export async function writeFile(
   session: Session,
   file: string,
   data: Uint8Array,
-  report: (count: number) => void = null
+  report?: (count: number) => void
 ) {
   // send "create" command (create & truncate)
   let cmd = pack("oos", 2, (1 << 0) | (1 << 2), file);
@@ -251,11 +254,11 @@ export async function sha256File(session: Session, file: string) {
 
   // verify "chunk" reply
   if (reply.byteLength !== 33 || reply[0] !== 3) {
-    throw new Error("invalid message");
+    throw new Error("invalid reply");
   }
 
   // return hash
-  return new Uint8Array(reply.buffer.slice(1));
+  return reply.slice(1);
 }
 
 export async function makePath(session: Session, path: string) {
@@ -270,7 +273,7 @@ async function receive(
   session: Session,
   expectAck: boolean,
   timeout = 5000
-): Promise<Uint8Array> {
+): Promise<Uint8Array | null> {
   // receive reply
   let [data] = await session.receive(fsEndpoint, expectAck, timeout);
   if (!data) {

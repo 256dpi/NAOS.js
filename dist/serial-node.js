@@ -23,70 +23,14 @@ class $aa3f839fb81c244d$export$c24e73273208a9bb {
             this.waiters.push(resolve);
             // handle timeout
             if (timeout > 0) setTimeout(()=>{
-                if (this.waiters.includes(resolve)) {
-                    const index = this.waiters.indexOf(resolve);
+                const index = this.waiters.indexOf(resolve);
+                if (index >= 0) {
                     this.waiters.splice(index, 1);
                     resolve(null);
                 }
             }, timeout);
         });
     }
-}
-
-
-class $aa2d5532cb55e3ab$export$3dc07afe418952bc extends (0, $aa3f839fb81c244d$export$c24e73273208a9bb) {
-}
-class $aa2d5532cb55e3ab$export$6b278a59f65cf1eb {
-    queues = [];
-    /**
-   * Adds a queue to the list.
-   */ add(queue) {
-        if (!this.queues.includes(queue)) this.queues.push(queue);
-    }
-    /**
-   * Removes a queue from the list.
-   */ drop(queue) {
-        const index = this.queues.indexOf(queue);
-        if (index >= 0) this.queues.splice(index, 1);
-    }
-    /**
-   * Dispatches data to all queues.
-   */ dispatch(data) {
-        for (let queue of this.queues)queue.push(data);
-    }
-}
-class $aa2d5532cb55e3ab$export$f69c19e57285b83a {
-    constructor(session, endpoint, data){
-        this.session = session;
-        this.endpoint = endpoint;
-        this.data = data;
-    }
-    /**
-   * Returns the size of the message.
-   */ size() {
-        return this.data?.length ?? 0;
-    }
-}
-async function $aa2d5532cb55e3ab$export$aafa59e2e03f2942(queue, timeout) {
-    // read from queue
-    const data = await queue.pop(timeout);
-    if (!data) throw new Error("timeout");
-    // check length and version
-    if (data.length < 4 || data[0] !== 1) throw new Error("invalid message");
-    // get view
-    const view = new DataView(data.buffer);
-    return new $aa2d5532cb55e3ab$export$f69c19e57285b83a(view.getUint16(1, true), data[3], data.length > 4 ? data.slice(4) : null);
-}
-async function $aa2d5532cb55e3ab$export$68d8715fc104d294(ch, msg) {
-    // prepare data
-    const data = new Uint8Array(4 + msg.size());
-    const view = new DataView(data.buffer);
-    view.setUint8(0, 1); // version
-    view.setUint16(1, msg.session, true);
-    view.setUint8(3, msg.endpoint);
-    if (msg.data) data.set(msg.data, 4);
-    // write data
-    await ch.write(data);
 }
 
 
@@ -161,6 +105,8 @@ function $6b0ddb031a0df909$export$2a703dbb0cb35339(fmt, ...args) {
     let size = 0;
     for (const [index, arg] of args.entries())switch(fmt.charAt(index)){
         case "s":
+            size += $6b0ddb031a0df909$export$fc336dbfaf62f18f(arg).byteLength;
+            break;
         case "b":
             size += arg.length;
             break;
@@ -181,14 +127,17 @@ function $6b0ddb031a0df909$export$2a703dbb0cb35339(fmt, ...args) {
     }
     // create buffer and view
     const buffer = new Uint8Array(size);
-    const view = new DataView(buffer.buffer);
+    const view = $6b0ddb031a0df909$export$9bcaddb313b2c51f(buffer);
     // write arguments
     let offset = 0;
     for (const [index, arg] of args.entries())switch(fmt.charAt(index)){
         case "s":
-            buffer.set($6b0ddb031a0df909$export$fc336dbfaf62f18f(arg), offset);
-            offset += arg.length;
-            break;
+            {
+                const encoded = $6b0ddb031a0df909$export$fc336dbfaf62f18f(arg);
+                buffer.set(encoded, offset);
+                offset += encoded.byteLength;
+                break;
+            }
         case "b":
             buffer.set(arg, offset);
             offset += arg.length;
@@ -216,7 +165,7 @@ function $6b0ddb031a0df909$export$2a703dbb0cb35339(fmt, ...args) {
 }
 function $6b0ddb031a0df909$export$417857010dc9287f(fmt, buffer) {
     // get view
-    const view = new DataView(buffer.buffer);
+    const view = $6b0ddb031a0df909$export$9bcaddb313b2c51f(buffer);
     // prepare result
     const result = [];
     // read arguments
@@ -227,7 +176,7 @@ function $6b0ddb031a0df909$export$417857010dc9287f(fmt, buffer) {
                 let end = buffer.indexOf(0, pos);
                 if (end === -1) end = buffer.length;
                 result.push($6b0ddb031a0df909$export$f84e8e69fd4488a5(buffer.slice(pos, end)));
-                pos = end;
+                pos = end + 1;
                 break;
             }
         case "b":
@@ -255,18 +204,75 @@ function $6b0ddb031a0df909$export$417857010dc9287f(fmt, buffer) {
     }
     return result;
 }
+function $6b0ddb031a0df909$export$9bcaddb313b2c51f(buffer) {
+    return new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+}
 function $6b0ddb031a0df909$export$398604a469f7de9a(buf1, buf2) {
     // check lengths
     if (buf1.byteLength !== buf2.byteLength) return false;
     // compare bytes
-    const view1 = new DataView(buf1.buffer);
-    const view2 = new DataView(buf2.buffer);
-    let i = buf1.byteLength;
-    while(i--){
-        if (view1.getUint8(i) !== view2.getUint8(i)) return false;
+    for(let i = 0; i < buf1.byteLength; i++){
+        if (buf1[i] !== buf2[i]) return false;
     }
     return true;
 }
+
+
+class $aa2d5532cb55e3ab$export$3dc07afe418952bc extends (0, $aa3f839fb81c244d$export$c24e73273208a9bb) {
+}
+class $aa2d5532cb55e3ab$export$6b278a59f65cf1eb {
+    queues = [];
+    /**
+   * Adds a queue to the list.
+   */ add(queue) {
+        if (!this.queues.includes(queue)) this.queues.push(queue);
+    }
+    /**
+   * Removes a queue from the list.
+   */ drop(queue) {
+        const index = this.queues.indexOf(queue);
+        if (index >= 0) this.queues.splice(index, 1);
+    }
+    /**
+   * Dispatches data to all queues.
+   */ dispatch(data) {
+        for (let queue of this.queues)queue.push(data);
+    }
+}
+class $aa2d5532cb55e3ab$export$f69c19e57285b83a {
+    constructor(session, endpoint, data){
+        this.session = session;
+        this.endpoint = endpoint;
+        this.data = data;
+    }
+    /**
+   * Returns the size of the message.
+   */ size() {
+        return this.data?.length ?? 0;
+    }
+}
+async function $aa2d5532cb55e3ab$export$aafa59e2e03f2942(queue, timeout) {
+    // read from queue
+    const data = await queue.pop(timeout);
+    if (!data) throw new Error("timeout");
+    // check length and version
+    if (data.length < 4 || data[0] !== 1) throw new Error("invalid message");
+    // get view
+    const view = (0, $6b0ddb031a0df909$export$9bcaddb313b2c51f)(data);
+    return new $aa2d5532cb55e3ab$export$f69c19e57285b83a(view.getUint16(1, true), data[3], data.length > 4 ? data.slice(4) : null);
+}
+async function $aa2d5532cb55e3ab$export$68d8715fc104d294(ch, msg) {
+    // prepare data
+    const data = new Uint8Array(4 + msg.size());
+    const view = (0, $6b0ddb031a0df909$export$9bcaddb313b2c51f)(data);
+    view.setUint8(0, 1); // version
+    view.setUint16(1, msg.session, true);
+    view.setUint8(3, msg.endpoint);
+    if (msg.data) data.set(msg.data, 4);
+    // write data
+    await ch.write(data);
+}
+
 
 
 const $b88665a077501510$var$knownPrefixes = [
@@ -338,11 +344,7 @@ class $b88665a077501510$export$875c5c6cbf01e2d8 {
                 subscribers.drop(queue);
             },
             write: async (data)=>{
-                const frame = new Uint8Array([
-                    ...(0, $6b0ddb031a0df909$export$fc336dbfaf62f18f)("NAOS!"),
-                    ...(0, $6b0ddb031a0df909$export$37cc283d8fbd3462)(data.buffer),
-                    ...(0, $6b0ddb031a0df909$export$fc336dbfaf62f18f)("\n")
-                ]);
+                const frame = (0, $6b0ddb031a0df909$export$ee1b3e54f0441b22)((0, $6b0ddb031a0df909$export$fc336dbfaf62f18f)("\nNAOS!"), (0, $6b0ddb031a0df909$export$37cc283d8fbd3462)(data), (0, $6b0ddb031a0df909$export$fc336dbfaf62f18f)("\n"));
                 await new Promise((resolve, reject)=>{
                     port.write(frame, (err)=>{
                         if (err) reject(err);

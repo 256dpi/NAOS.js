@@ -4,7 +4,7 @@ import { Channel, Device } from "./device";
 import { Session, Status } from "./session";
 
 export class ManagedDevice {
-  public device: Device;
+  public device: Device | null;
   private pinger: ReturnType<typeof setInterval>;
   private channel: Channel | null;
   private session: Session | null;
@@ -18,9 +18,13 @@ export class ManagedDevice {
     // start pinger
     this.pinger = setInterval(async () => {
       if (this.active()) {
-        await this.useSession(async (session) => {
-          await session.ping(1000);
-        });
+        try {
+          await this.useSession(async (session) => {
+            await session.ping(1000);
+          });
+        } catch (e) {
+          // ignore ping errors
+        }
       }
     }, 5000);
   }
@@ -35,23 +39,23 @@ export class ManagedDevice {
     this.channel = await this.device.open();
   }
 
-  active(): Boolean {
+  active(): boolean {
     return this.channel != null;
   }
 
-  async locked(): Promise<Boolean> {
+  async locked(): Promise<boolean> {
     // check state
     if (!this.active()) {
       throw new Error("device not active");
     }
 
     // get status
-    let status: Status;
+    let status!: Status;
     await this.useSession(async (session) => {
       status = await session.status(1000);
     });
 
-    return (status & Status.locked) != 0;
+    return (status & Status.locked) !== 0;
   }
 
   async unlock(password: string): Promise<boolean> {
@@ -61,7 +65,7 @@ export class ManagedDevice {
     }
 
     // unlock
-    let unlocked: boolean;
+    let unlocked!: boolean;
     await this.useSession(async (session) => {
       unlocked = await session.unlock(password, 1000);
     });
@@ -112,11 +116,11 @@ export class ManagedDevice {
       } catch (e) {
         // close session
         try {
-          this.session.end(1000).then();
-          this.session = null;
+          await this.session.end(1000);
         } catch (e) {
           // ignore
         }
+        this.session = null;
 
         // rethrow
         throw e;
@@ -139,10 +143,12 @@ export class ManagedDevice {
     this.session = null;
 
     // end session
-    try {
-      await session.end(1000);
-    } catch (e) {
-      // ignore
+    if (session) {
+      try {
+        await session.end(1000);
+      } catch (e) {
+        // ignore
+      }
     }
 
     // close channel
