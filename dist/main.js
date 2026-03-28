@@ -810,8 +810,11 @@ class $5f0bc7af558cc661$export$1fb4852a55678982 {
         await (0, $99f74415292121e0$export$68d8715fc104d294)(ch, new (0, $99f74415292121e0$export$f69c19e57285b83a)(0, 0, (0, $fab42eb3dee39b5b$export$fc336dbfaf62f18f)(handle)));
         // await reply
         let sid;
+        const deadline = Date.now() + 10000;
         for(;;){
-            const reply = await (0, $99f74415292121e0$export$aafa59e2e03f2942)(queue, 10000);
+            const remaining = deadline - Date.now();
+            if (remaining <= 0) throw new Error("timeout");
+            const reply = await (0, $99f74415292121e0$export$aafa59e2e03f2942)(queue, remaining);
             if (reply.endpoint === 0 && (0, $fab42eb3dee39b5b$export$f84e8e69fd4488a5)(reply.data) === handle) {
                 sid = reply.session;
                 break;
@@ -927,8 +930,11 @@ class $5f0bc7af558cc661$export$1fb4852a55678982 {
         this.ch.unsubscribe(this.qu);
     }
     async read(timeout) {
+        const deadline = Date.now() + timeout;
         for(;;){
-            const msg = await (0, $99f74415292121e0$export$aafa59e2e03f2942)(this.qu, timeout);
+            const remaining = deadline - Date.now();
+            if (remaining <= 0) throw new Error("timeout");
+            const msg = await (0, $99f74415292121e0$export$aafa59e2e03f2942)(this.qu, remaining);
             if (msg.session === this.id) return msg;
         }
     }
