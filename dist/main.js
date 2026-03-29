@@ -1397,7 +1397,6 @@ class $668c9db91c0d9266$export$1ff2b8f5c3b1fa7d {
         // run receiver
         (async ()=>{
             while(!closed)try {
-                // TODO: Use same trick as in swift to directly read from the session.
                 const data = await $668c9db91c0d9266$export$f4bfe48ee3ba03ae(session);
                 subscribers.dispatch(data);
             } catch (e) {
@@ -1427,7 +1426,7 @@ class $668c9db91c0d9266$export$1ff2b8f5c3b1fa7d {
                 closed = true;
                 this.ch = null;
                 try {
-                    await session.end();
+                    await session.end(1000);
                 } catch (e) {
                 // ignore
                 }
