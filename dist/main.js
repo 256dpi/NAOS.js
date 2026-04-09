@@ -1560,17 +1560,13 @@ const $e1163a73e33a3ccf$var$updateEndpoint = 0x2;
 async function $e1163a73e33a3ccf$export$722fbec263ad908a(session, data, report, timeout = 30000) {
     // send "begin" command
     let cmd = (0, $fab42eb3dee39b5b$export$2a703dbb0cb35339)("oi", 0, data.length);
-    await session.send($e1163a73e33a3ccf$var$updateEndpoint, cmd, 0);
-    // receive reply
-    let [reply] = await session.receive($e1163a73e33a3ccf$var$updateEndpoint, false, timeout);
-    // verify reply
-    if (reply.length !== 1 || reply[0] !== 0) throw new Error("invalid reply");
+    await session.send($e1163a73e33a3ccf$var$updateEndpoint, cmd, timeout);
     // get width
     const width = session.channel().width();
     // get MTU
     let mtu = await session.getMTU();
     // subtract overhead
-    mtu -= 2;
+    mtu -= 6;
     // write data in chunks
     let num = 0;
     let offset = 0;
@@ -1581,7 +1577,7 @@ async function $e1163a73e33a3ccf$export$722fbec263ad908a(session, data, report, 
         // determine acked
         let acked = num % width === 0;
         // send "write" command
-        cmd = (0, $fab42eb3dee39b5b$export$2a703dbb0cb35339)("oob", 1, acked ? 1 : 0, chunkData);
+        cmd = (0, $fab42eb3dee39b5b$export$2a703dbb0cb35339)("ooib", 1, acked ? 1 : 0, offset, chunkData);
         await session.send($e1163a73e33a3ccf$var$updateEndpoint, cmd, acked ? timeout : 0);
         // increment offset
         offset += chunkSize;
@@ -1592,11 +1588,7 @@ async function $e1163a73e33a3ccf$export$722fbec263ad908a(session, data, report, 
     }
     // send "finish" command
     cmd = (0, $fab42eb3dee39b5b$export$2a703dbb0cb35339)("o", 3);
-    await session.send($e1163a73e33a3ccf$var$updateEndpoint, cmd, 0);
-    // receive reply
-    [reply] = await session.receive($e1163a73e33a3ccf$var$updateEndpoint, false, timeout);
-    // verify reply
-    if (reply.length !== 1 || reply[0] !== 1) throw new Error("invalid reply");
+    await session.send($e1163a73e33a3ccf$var$updateEndpoint, cmd, timeout);
 }
 
 
