@@ -3,7 +3,7 @@ import {
   collectParams,
   listDir,
   listParams,
-  makeHTTPDevice,
+  HTTPDevice,
   makePath,
   ManagedDevice,
   random,
@@ -25,7 +25,7 @@ import {
   readFloatMetrics,
   readLongMetrics,
   RelayDevice,
-  scanRelay,
+  relayCollect,
   authStatus,
   authProvision,
   authDescribe,
@@ -39,6 +39,8 @@ import {
   ParamType,
   ParamMode,
   MetricKind,
+  getParam,
+  setParam,
 } from "./src";
 
 // --- UI helpers ---
@@ -86,9 +88,35 @@ function check(condition: boolean, label: string) {
   }
 }
 
-function setStatus(text: string, connected: boolean) {
-  statusEl.textContent = text;
-  statusEl.className = connected ? "connected" : "";
+function updateUI() {
+  const connected = device != null;
+  const active = connected && device.active();
+  const unlocked = active && !device.locked();
+
+  statusEl.className = active ? "connected" : connected ? "connected" : "";
+
+  document.querySelectorAll(".device-connected").forEach((el) => {
+    (el as HTMLButtonElement | HTMLInputElement).disabled = !connected;
+  });
+  document.querySelectorAll(".device-active").forEach((el) => {
+    (el as HTMLButtonElement | HTMLInputElement).disabled = !active;
+  });
+  document.querySelectorAll(".device-unlocked").forEach((el) => {
+    (el as HTMLButtonElement | HTMLInputElement).disabled = !unlocked;
+  });
+
+  // update activate button text
+  const btn = document.getElementById("activate-btn");
+  if (btn) {
+    btn.textContent = active ? "Deactivate" : "Activate";
+  }
+
+  // update status text
+  if (connected) {
+    statusEl.textContent = device.device()?.type() ?? "Connected";
+  } else {
+    statusEl.textContent = "No device";
+  }
 }
 
 function clearLog() {
@@ -113,6 +141,39 @@ let device: ManagedDevice | null = null;
 
 // --- Connection ---
 
+function watchEvents() {
+  const dev = device;
+  (async () => {
+    for await (const event of dev.events()) {
+      if (event.type === "disconnected") {
+        log("Device disconnected", "error");
+        updateUI();
+        // reconnect loop
+        statusEl.textContent = "Reconnecting...";
+        for (;;) {
+          await new Promise((r) => setTimeout(r, 1000));
+          if (device !== dev) return;
+          try {
+            await dev.activate();
+            break;
+          } catch (e) {
+            log(`Reconnect failed: ${e}`, "error");
+          }
+        }
+        if (device !== dev) return;
+        log("Reconnected", "success");
+        if (dev.locked()) {
+          log("Device is locked", "info");
+        }
+        updateUI();
+      } else if (event.type === "connected") {
+        log("Device connected", "success");
+        updateUI();
+      }
+    }
+  })();
+}
+
 async function ble() {
   if (device) {
     await device.stop();
@@ -124,18 +185,10 @@ async function ble() {
     return;
   }
 
-  log("BLE device acquired", "success");
-
   device = new ManagedDevice(dev);
-  await device.activate();
-
-  if (await device.locked()) {
-    const ok = await device.unlock(prompt("Password"));
-    check(ok, "Unlock");
-  }
-
-  setStatus("BLE connected", true);
-  log("Ready!", "success");
+  watchEvents();
+  log("BLE device acquired", "success");
+  updateUI();
 }
 
 async function serial() {
@@ -149,18 +202,10 @@ async function serial() {
     return;
   }
 
-  log("Serial device acquired", "success");
-
   device = new ManagedDevice(dev);
-  await device.activate();
-
-  if (await device.locked()) {
-    const ok = await device.unlock(prompt("Password"));
-    check(ok, "Unlock");
-  }
-
-  setStatus("Serial connected", true);
-  log("Ready!", "success");
+  watchEvents();
+  log("Serial device acquired", "success");
+  updateUI();
 }
 
 async function http() {
@@ -172,16 +217,82 @@ async function http() {
   const addr = prompt("Address", "192.168.1.1");
   if (!addr) return;
 
-  device = new ManagedDevice(makeHTTPDevice(addr));
-  await device.activate();
+  device = new ManagedDevice(new HTTPDevice(addr));
+  watchEvents();
+  log("HTTP device acquired", "success");
+  updateUI();
+}
 
-  if (await device.locked()) {
-    const ok = await device.unlock(prompt("Password"));
-    check(ok, "Unlock");
+async function activate() {
+  if (!device) return;
+
+  if (device.active()) {
+    await device.deactivate();
+    log("Deactivated", "info");
+  } else {
+    await device.activate();
+    log("Activated", "success");
+    if (device.locked()) {
+      log("Device is locked", "info");
+    }
+  }
+  updateUI();
+}
+
+async function unlock() {
+  if (!device) return;
+
+  const pw = prompt("Password");
+  if (!pw) return;
+
+  const ok = await device.unlock(pw);
+  check(ok, "Unlock");
+  updateUI();
+}
+
+async function password() {
+  if (!device) {
+    return;
   }
 
-  setStatus(`HTTP ${addr}`, true);
-  log("Ready!", "success");
+  let hasPassword = false;
+  await device.useSession(async (session) => {
+    const value = await getParam(session, "device-password");
+    hasPassword = value != null && value.length > 0;
+  });
+
+  if (hasPassword) {
+    // confirm and clear password
+    if (!confirm("Clear device password?")) {
+      return;
+    }
+    await device.useSession(async (session) => {
+      await setParam(session, "device-password", toBuffer(""));
+    });
+    log("Password cleared", "success");
+  } else {
+    // set password
+    const pw = prompt("Password");
+    if (!pw) {
+      return;
+    }
+    await device.useSession(async (session) => {
+      await setParam(session, "device-password", toBuffer(pw));
+    });
+    log("Password set", "success");
+  }
+}
+
+async function disconnect() {
+  if (!device) {
+    return;
+  }
+
+  await device.stop();
+  device = null;
+
+  log("Disconnected", "info");
+  updateUI();
 }
 
 // --- Tests ---
@@ -206,8 +317,6 @@ function decodeParamValue(value: Uint8Array): string {
 async function params() {
   log("Params", "heading");
 
-  await device.activate();
-
   await device.useSession(async (session) => {
     const params = await listParams(session);
 
@@ -227,7 +336,6 @@ async function params() {
     }
   });
 
-  await device.deactivate();
   log("Done!", "success");
 }
 
@@ -241,7 +349,6 @@ async function flash(input: HTMLInputElement) {
   const data = new Uint8Array(await requestFile(input.files[0]));
   log(`Firmware size: ${data.length} bytes`);
 
-  await device.activate();
   const session = await device.newSession();
 
   const setProgress = addProgress(100);
@@ -250,15 +357,12 @@ async function flash(input: HTMLInputElement) {
   });
 
   await session.end(1000);
-  await device.deactivate();
 
   log("Done!", "success");
 }
 
 async function fs() {
   log("FS", "heading");
-
-  await device.activate();
 
   await device.useSession(async (session) => {
     await makePath(session, "/TEST");
@@ -300,8 +404,6 @@ async function fs() {
 
 async function metrics() {
   log("Metrics", "heading");
-
-  await device.activate();
 
   await device.useSession(async (session) => {
     const metrics = await listMetrics(session);
@@ -362,10 +464,8 @@ async function metrics() {
 async function relay() {
   log("Relay", "heading");
 
-  await device.activate();
-
   await device.useSession(async (session) => {
-    const devices = await scanRelay(session);
+    const devices = await relayCollect(session);
     log(
       `Found ${devices.length} relay device(s): ${devices.join(", ") || "none"}`
     );
@@ -404,8 +504,6 @@ async function relay() {
 
 async function auth() {
   log("Auth", "heading");
-
-  await device.activate();
 
   await device.useSession(async (session) => {
     let provisioned = await authStatus(session);
@@ -453,8 +551,6 @@ async function auth() {
 async function debug() {
   log("Debug", "heading");
 
-  await device.activate();
-
   await device.useSession(async (session) => {
     const [size, reason] = await checkCoredump(session);
     logData("Coredump size", size);
@@ -484,8 +580,6 @@ const ECHO_ENDPOINT = 0x08;
 
 async function throughput() {
   log("Throughput", "heading");
-
-  await device.activate();
 
   const session = await device.newSession();
 
@@ -540,8 +634,6 @@ async function throughput() {
 async function memory() {
   log("Memory", "heading");
 
-  await device.activate();
-
   const session = await device.newSession();
   const metrics = await listMetrics(session);
   const mem = metrics.find((m) => m.name === "free-memory");
@@ -574,8 +666,6 @@ async function transfer() {
     original[i] = i & 0xff;
   }
   logData("Generated", `${size} bytes`);
-
-  await device.activate();
 
   await device.useSession(async (session) => {
     log("Uploading...");
@@ -621,6 +711,10 @@ async function transfer() {
 window["_ble"] = ble;
 window["_serial"] = serial;
 window["_http"] = http;
+window["_activate"] = activate;
+window["_unlock"] = unlock;
+window["_password"] = password;
+window["_disconnect"] = disconnect;
 window["_params"] = params;
 window["_flash"] = flash;
 window["_fs"] = fs;

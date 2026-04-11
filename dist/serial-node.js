@@ -250,6 +250,7 @@ class $aa2d5532cb55e3ab$export$f69c19e57285b83a {
 }
 class $aa2d5532cb55e3ab$export$cfdacaa37f9b4dd7 {
     closed = false;
+    doneResolve = null;
     queues = new Set();
     opening = new Map();
     sessions = new Map();
@@ -259,6 +260,9 @@ class $aa2d5532cb55e3ab$export$cfdacaa37f9b4dd7 {
         this.dev = device;
         this.widthValue = width;
         this.onClose = onClose;
+        this.done = new Promise((resolve)=>{
+            this.doneResolve = resolve;
+        });
         const start = this.tr.start((msg)=>{
             for (const queue of this.route(msg))queue.push(msg);
         }, ()=>{
@@ -312,6 +316,7 @@ class $aa2d5532cb55e3ab$export$cfdacaa37f9b4dd7 {
             await this.tr.close();
         } finally{
             this.onClose?.();
+            this.doneResolve?.();
         }
     }
     route(msg) {
@@ -357,7 +362,7 @@ const $b88665a077501510$var$knownPrefixes = [
     "tty.usbmodem",
     "ttyUSB"
 ];
-async function $b88665a077501510$export$3f628d5f6f2c283b() {
+async function $b88665a077501510$export$9771b2cde0fbddb8() {
     const ports = await (0, $2MdkL$SerialPort).list();
     // get paths, sort reverse to list combined ports with serial port first
     const paths = ports.map((p)=>p.path).sort().reverse();
@@ -447,5 +452,5 @@ class $b88665a077501510$export$875c5c6cbf01e2d8 {
 }
 
 
-export {$b88665a077501510$export$3f628d5f6f2c283b as listSerialPorts, $b88665a077501510$export$875c5c6cbf01e2d8 as NodeSerialDevice};
+export {$b88665a077501510$export$9771b2cde0fbddb8 as serialList, $b88665a077501510$export$875c5c6cbf01e2d8 as NodeSerialDevice};
 //# sourceMappingURL=serial-node.js.map
