@@ -1,5 +1,7 @@
 import {SerialPort as $2MdkL$SerialPort} from "serialport";
 import $2MdkL$serialportparserreadline from "@serialport/parser-readline";
+import {basename as $2MdkL$basename} from "node:path";
+
 
 
 
@@ -220,25 +222,6 @@ function $6b0ddb031a0df909$export$398604a469f7de9a(buf1, buf2) {
 
 class $aa2d5532cb55e3ab$export$3dc07afe418952bc extends (0, $aa3f839fb81c244d$export$c24e73273208a9bb) {
 }
-class $aa2d5532cb55e3ab$export$6b278a59f65cf1eb {
-    queues = [];
-    /**
-   * Adds a queue to the list.
-   */ add(queue) {
-        if (!this.queues.includes(queue)) this.queues.push(queue);
-    }
-    /**
-   * Removes a queue from the list.
-   */ drop(queue) {
-        const index = this.queues.indexOf(queue);
-        if (index >= 0) this.queues.splice(index, 1);
-    }
-    /**
-   * Dispatches data to all queues.
-   */ dispatch(data) {
-        for (let queue of this.queues)queue.push(data);
-    }
-}
 class $aa2d5532cb55e3ab$export$f69c19e57285b83a {
     constructor(session, endpoint, data){
         this.session = session;
@@ -250,27 +233,120 @@ class $aa2d5532cb55e3ab$export$f69c19e57285b83a {
    */ size() {
         return this.data?.length ?? 0;
     }
+    static parse(data) {
+        if (data.length < 4 || data[0] !== 1) return null;
+        const view = (0, $6b0ddb031a0df909$export$9bcaddb313b2c51f)(data);
+        return new $aa2d5532cb55e3ab$export$f69c19e57285b83a(view.getUint16(1, true), data[3], data.length > 4 ? data.slice(4) : null);
+    }
+    build() {
+        const data = new Uint8Array(4 + this.size());
+        const view = (0, $6b0ddb031a0df909$export$9bcaddb313b2c51f)(data);
+        view.setUint8(0, 1);
+        view.setUint16(1, this.session, true);
+        view.setUint8(3, this.endpoint);
+        if (this.data) data.set(this.data, 4);
+        return data;
+    }
+}
+class $aa2d5532cb55e3ab$export$cfdacaa37f9b4dd7 {
+    closed = false;
+    queues = new Set();
+    opening = new Map();
+    sessions = new Map();
+    closing = new Map();
+    constructor(tr, device, width, onClose){
+        this.tr = tr;
+        this.dev = device;
+        this.widthValue = width;
+        this.onClose = onClose;
+        const start = this.tr.start((msg)=>{
+            for (const queue of this.route(msg))queue.push(msg);
+        }, ()=>{
+            if (!this.closed) this.close();
+        });
+        Promise.resolve(start).catch(()=>{
+            if (!this.closed) this.close();
+        });
+    }
+    width() {
+        return this.widthValue;
+    }
+    device() {
+        return this.dev;
+    }
+    subscribe(queue) {
+        this.queues.add(queue);
+    }
+    unsubscribe(queue) {
+        this.queues.delete(queue);
+        for (const [handle, owner] of this.opening.entries())if (owner === queue) this.opening.delete(handle);
+        for (const [session, owner] of this.sessions.entries())if (owner === queue) {
+            this.sessions.delete(session);
+            this.closing.delete(session);
+        }
+        for (const [session, owner] of this.closing.entries())if (owner === queue) this.closing.delete(session);
+    }
+    async write(queue, msg) {
+        if (!queue) {
+            await this.tr.write(msg);
+            return;
+        }
+        if (msg.session !== 0) {
+            const owner = this.sessions.get(msg.session);
+            if (owner && owner !== queue) throw new Error("wrong owner");
+        }
+        if (msg.session === 0 && msg.endpoint === 0x0) this.opening.set(msg.data ? (0, $6b0ddb031a0df909$export$f84e8e69fd4488a5)(msg.data) : "", queue);
+        if (msg.session !== 0 && msg.endpoint === 0xff) this.closing.set(msg.session, queue);
+        try {
+            await this.tr.write(msg);
+        } catch (err) {
+            if (msg.session === 0 && msg.endpoint === 0x0 && this.opening.get(msg.data ? (0, $6b0ddb031a0df909$export$f84e8e69fd4488a5)(msg.data) : "") === queue) this.opening.delete(msg.data ? (0, $6b0ddb031a0df909$export$f84e8e69fd4488a5)(msg.data) : "");
+            if (msg.session !== 0 && msg.endpoint === 0xff && this.closing.get(msg.session) === queue) this.closing.delete(msg.session);
+            throw err;
+        }
+    }
+    async close() {
+        if (this.closed) return;
+        this.closed = true;
+        try {
+            await this.tr.close();
+        } finally{
+            this.onClose?.();
+        }
+    }
+    route(msg) {
+        if (msg.endpoint === 0x0) {
+            const owner = this.opening.get(msg.data ? (0, $6b0ddb031a0df909$export$f84e8e69fd4488a5)(msg.data) : "");
+            if (owner && this.queues.has(owner)) {
+                this.opening.delete(msg.data ? (0, $6b0ddb031a0df909$export$f84e8e69fd4488a5)(msg.data) : "");
+                this.sessions.set(msg.session, owner);
+                return [
+                    owner
+                ];
+            }
+        }
+        if (msg.session !== 0) {
+            const owner = this.sessions.get(msg.session);
+            if (owner && this.queues.has(owner)) {
+                if (msg.endpoint === 0xff && msg.size() === 0) {
+                    this.sessions.delete(msg.session);
+                    this.closing.delete(msg.session);
+                }
+                return [
+                    owner
+                ];
+            }
+            this.sessions.delete(msg.session);
+            this.closing.delete(msg.session);
+            return [];
+        }
+        return Array.from(this.queues);
+    }
 }
 async function $aa2d5532cb55e3ab$export$aafa59e2e03f2942(queue, timeout) {
-    // read from queue
-    const data = await queue.pop(timeout);
-    if (!data) throw new Error("timeout");
-    // check length and version
-    if (data.length < 4 || data[0] !== 1) throw new Error("invalid message");
-    // get view
-    const view = (0, $6b0ddb031a0df909$export$9bcaddb313b2c51f)(data);
-    return new $aa2d5532cb55e3ab$export$f69c19e57285b83a(view.getUint16(1, true), data[3], data.length > 4 ? data.slice(4) : null);
-}
-async function $aa2d5532cb55e3ab$export$68d8715fc104d294(ch, msg) {
-    // prepare data
-    const data = new Uint8Array(4 + msg.size());
-    const view = (0, $6b0ddb031a0df909$export$9bcaddb313b2c51f)(data);
-    view.setUint8(0, 1); // version
-    view.setUint16(1, msg.session, true);
-    view.setUint8(3, msg.endpoint);
-    if (msg.data) data.set(msg.data, 4);
-    // write data
-    await ch.write(data);
+    const msg = await queue.pop(timeout);
+    if (!msg) throw new Error("timeout");
+    return msg;
 }
 
 
@@ -298,6 +374,12 @@ class $b88665a077501510$export$875c5c6cbf01e2d8 {
     id() {
         return `serial/${this.path}`;
     }
+    type() {
+        return "Serial";
+    }
+    name() {
+        return $2MdkL$basename(this.path);
+    }
     async open() {
         // check channel
         if (this.ch) throw new Error("channel already open");
@@ -311,40 +393,33 @@ class $b88665a077501510$export$875c5c6cbf01e2d8 {
                 else resolve(port);
             });
         });
-        // create list
-        const subscribers = new (0, $aa2d5532cb55e3ab$export$6b278a59f65cf1eb)();
-        // parse lines and dispatch NAOS frames
+        // prepare flag
+        let closed = false;
+        // capture port ref for channel
+        const port = this.port;
         const parser = this.port.pipe(new (0, $2MdkL$serialportparserreadline)({
             delimiter: "\n"
         }));
-        parser.on("data", (line)=>{
-            if (line.startsWith("NAOS!")) {
-                const data = line.slice(5);
-                subscribers.dispatch(Uint8Array.from(atob(data), (c)=>c.charCodeAt(0)));
-            }
-        });
-        // prepare flag
-        let closed = false;
-        // handle close
-        this.port.on("close", ()=>{
-            closed = true;
-            if (this.ch) this.ch = null;
-        });
-        // capture port ref for channel
-        const port = this.port;
-        // create channel
-        this.ch = {
-            name: ()=>"serial",
-            valid: ()=>!closed,
-            width: ()=>1,
-            subscribe: (q)=>{
-                subscribers.add(q);
+        let onLine = null;
+        let onPortClose = null;
+        const transport = {
+            start: (onData, onClose)=>{
+                onLine = (line)=>{
+                    if (line.startsWith("NAOS!")) {
+                        const data = line.slice(5);
+                        const msg = (0, $aa2d5532cb55e3ab$export$f69c19e57285b83a).parse(Uint8Array.from(atob(data), (c)=>c.charCodeAt(0)));
+                        if (msg) onData(msg);
+                    }
+                };
+                onPortClose = ()=>{
+                    closed = true;
+                    onClose();
+                };
+                parser.on("data", onLine);
+                port.on("close", onPortClose);
             },
-            unsubscribe: (queue)=>{
-                subscribers.drop(queue);
-            },
-            write: async (data)=>{
-                const frame = (0, $6b0ddb031a0df909$export$ee1b3e54f0441b22)((0, $6b0ddb031a0df909$export$fc336dbfaf62f18f)("\nNAOS!"), (0, $6b0ddb031a0df909$export$37cc283d8fbd3462)(data), (0, $6b0ddb031a0df909$export$fc336dbfaf62f18f)("\n"));
+            write: async (msg)=>{
+                const frame = (0, $6b0ddb031a0df909$export$ee1b3e54f0441b22)((0, $6b0ddb031a0df909$export$fc336dbfaf62f18f)("\nNAOS!"), (0, $6b0ddb031a0df909$export$37cc283d8fbd3462)(msg.build()), (0, $6b0ddb031a0df909$export$fc336dbfaf62f18f)("\n"));
                 await new Promise((resolve, reject)=>{
                     port.write(frame, (err)=>{
                         if (err) reject(err);
@@ -354,7 +429,8 @@ class $b88665a077501510$export$875c5c6cbf01e2d8 {
             },
             close: async ()=>{
                 closed = true;
-                this.ch = null;
+                if (onLine) parser.off("data", onLine);
+                if (onPortClose) port.off("close", onPortClose);
                 await new Promise((resolve, reject)=>{
                     port.close((err)=>{
                         if (err) reject(err);
@@ -363,6 +439,9 @@ class $b88665a077501510$export$875c5c6cbf01e2d8 {
                 });
             }
         };
+        this.ch = new (0, $aa2d5532cb55e3ab$export$cfdacaa37f9b4dd7)(transport, this, 1, ()=>{
+            this.ch = null;
+        });
         return this.ch;
     }
 }

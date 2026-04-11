@@ -273,10 +273,9 @@ $parcel$export($9224a2c5eeae1672$exports, "BLEDevice", () => $9224a2c5eeae1672$e
 var $99f74415292121e0$exports = {};
 
 $parcel$export($99f74415292121e0$exports, "Queue", () => $99f74415292121e0$export$3dc07afe418952bc);
-$parcel$export($99f74415292121e0$exports, "QueueList", () => $99f74415292121e0$export$6b278a59f65cf1eb);
 $parcel$export($99f74415292121e0$exports, "Message", () => $99f74415292121e0$export$f69c19e57285b83a);
+$parcel$export($99f74415292121e0$exports, "Channel", () => $99f74415292121e0$export$cfdacaa37f9b4dd7);
 $parcel$export($99f74415292121e0$exports, "read", () => $99f74415292121e0$export$aafa59e2e03f2942);
-$parcel$export($99f74415292121e0$exports, "write", () => $99f74415292121e0$export$68d8715fc104d294);
 var $89603ac6c30e3b84$exports = {};
 
 $parcel$export($89603ac6c30e3b84$exports, "AsyncQueue", () => $89603ac6c30e3b84$export$c24e73273208a9bb);
@@ -314,25 +313,6 @@ class $89603ac6c30e3b84$export$c24e73273208a9bb {
 
 class $99f74415292121e0$export$3dc07afe418952bc extends (0, $89603ac6c30e3b84$export$c24e73273208a9bb) {
 }
-class $99f74415292121e0$export$6b278a59f65cf1eb {
-    queues = [];
-    /**
-   * Adds a queue to the list.
-   */ add(queue) {
-        if (!this.queues.includes(queue)) this.queues.push(queue);
-    }
-    /**
-   * Removes a queue from the list.
-   */ drop(queue) {
-        const index = this.queues.indexOf(queue);
-        if (index >= 0) this.queues.splice(index, 1);
-    }
-    /**
-   * Dispatches data to all queues.
-   */ dispatch(data) {
-        for (let queue of this.queues)queue.push(data);
-    }
-}
 class $99f74415292121e0$export$f69c19e57285b83a {
     constructor(session, endpoint, data){
         this.session = session;
@@ -344,27 +324,120 @@ class $99f74415292121e0$export$f69c19e57285b83a {
    */ size() {
         return this.data?.length ?? 0;
     }
+    static parse(data) {
+        if (data.length < 4 || data[0] !== 1) return null;
+        const view = (0, $fab42eb3dee39b5b$export$9bcaddb313b2c51f)(data);
+        return new $99f74415292121e0$export$f69c19e57285b83a(view.getUint16(1, true), data[3], data.length > 4 ? data.slice(4) : null);
+    }
+    build() {
+        const data = new Uint8Array(4 + this.size());
+        const view = (0, $fab42eb3dee39b5b$export$9bcaddb313b2c51f)(data);
+        view.setUint8(0, 1);
+        view.setUint16(1, this.session, true);
+        view.setUint8(3, this.endpoint);
+        if (this.data) data.set(this.data, 4);
+        return data;
+    }
+}
+class $99f74415292121e0$export$cfdacaa37f9b4dd7 {
+    closed = false;
+    queues = new Set();
+    opening = new Map();
+    sessions = new Map();
+    closing = new Map();
+    constructor(tr, device, width, onClose){
+        this.tr = tr;
+        this.dev = device;
+        this.widthValue = width;
+        this.onClose = onClose;
+        const start = this.tr.start((msg)=>{
+            for (const queue of this.route(msg))queue.push(msg);
+        }, ()=>{
+            if (!this.closed) this.close();
+        });
+        Promise.resolve(start).catch(()=>{
+            if (!this.closed) this.close();
+        });
+    }
+    width() {
+        return this.widthValue;
+    }
+    device() {
+        return this.dev;
+    }
+    subscribe(queue) {
+        this.queues.add(queue);
+    }
+    unsubscribe(queue) {
+        this.queues.delete(queue);
+        for (const [handle, owner] of this.opening.entries())if (owner === queue) this.opening.delete(handle);
+        for (const [session, owner] of this.sessions.entries())if (owner === queue) {
+            this.sessions.delete(session);
+            this.closing.delete(session);
+        }
+        for (const [session, owner] of this.closing.entries())if (owner === queue) this.closing.delete(session);
+    }
+    async write(queue, msg) {
+        if (!queue) {
+            await this.tr.write(msg);
+            return;
+        }
+        if (msg.session !== 0) {
+            const owner = this.sessions.get(msg.session);
+            if (owner && owner !== queue) throw new Error("wrong owner");
+        }
+        if (msg.session === 0 && msg.endpoint === 0x0) this.opening.set(msg.data ? (0, $fab42eb3dee39b5b$export$f84e8e69fd4488a5)(msg.data) : "", queue);
+        if (msg.session !== 0 && msg.endpoint === 0xff) this.closing.set(msg.session, queue);
+        try {
+            await this.tr.write(msg);
+        } catch (err) {
+            if (msg.session === 0 && msg.endpoint === 0x0 && this.opening.get(msg.data ? (0, $fab42eb3dee39b5b$export$f84e8e69fd4488a5)(msg.data) : "") === queue) this.opening.delete(msg.data ? (0, $fab42eb3dee39b5b$export$f84e8e69fd4488a5)(msg.data) : "");
+            if (msg.session !== 0 && msg.endpoint === 0xff && this.closing.get(msg.session) === queue) this.closing.delete(msg.session);
+            throw err;
+        }
+    }
+    async close() {
+        if (this.closed) return;
+        this.closed = true;
+        try {
+            await this.tr.close();
+        } finally{
+            this.onClose?.();
+        }
+    }
+    route(msg) {
+        if (msg.endpoint === 0x0) {
+            const owner = this.opening.get(msg.data ? (0, $fab42eb3dee39b5b$export$f84e8e69fd4488a5)(msg.data) : "");
+            if (owner && this.queues.has(owner)) {
+                this.opening.delete(msg.data ? (0, $fab42eb3dee39b5b$export$f84e8e69fd4488a5)(msg.data) : "");
+                this.sessions.set(msg.session, owner);
+                return [
+                    owner
+                ];
+            }
+        }
+        if (msg.session !== 0) {
+            const owner = this.sessions.get(msg.session);
+            if (owner && this.queues.has(owner)) {
+                if (msg.endpoint === 0xff && msg.size() === 0) {
+                    this.sessions.delete(msg.session);
+                    this.closing.delete(msg.session);
+                }
+                return [
+                    owner
+                ];
+            }
+            this.sessions.delete(msg.session);
+            this.closing.delete(msg.session);
+            return [];
+        }
+        return Array.from(this.queues);
+    }
 }
 async function $99f74415292121e0$export$aafa59e2e03f2942(queue, timeout) {
-    // read from queue
-    const data = await queue.pop(timeout);
-    if (!data) throw new Error("timeout");
-    // check length and version
-    if (data.length < 4 || data[0] !== 1) throw new Error("invalid message");
-    // get view
-    const view = (0, $fab42eb3dee39b5b$export$9bcaddb313b2c51f)(data);
-    return new $99f74415292121e0$export$f69c19e57285b83a(view.getUint16(1, true), data[3], data.length > 4 ? data.slice(4) : null);
-}
-async function $99f74415292121e0$export$68d8715fc104d294(ch, msg) {
-    // prepare data
-    const data = new Uint8Array(4 + msg.size());
-    const view = (0, $fab42eb3dee39b5b$export$9bcaddb313b2c51f)(data);
-    view.setUint8(0, 1); // version
-    view.setUint16(1, msg.session, true);
-    view.setUint8(3, msg.endpoint);
-    if (msg.data) data.set(msg.data, 4);
-    // write data
-    await ch.write(data);
+    const msg = await queue.pop(timeout);
+    if (!msg) throw new Error("timeout");
+    return msg;
 }
 
 
@@ -409,6 +482,12 @@ class $9224a2c5eeae1672$export$926ab273976713de {
     id() {
         return "ble/" + this.dev.id;
     }
+    type() {
+        return "BLE";
+    }
+    name() {
+        return this.dev.name || "Unnamed";
+    }
     async open() {
         // check channel
         if (this.ch) throw new Error("channel already open");
@@ -420,44 +499,34 @@ class $9224a2c5eeae1672$export$926ab273976713de {
             this.char = await this.svc.getCharacteristic($9224a2c5eeae1672$var$charUUID);
             if (!this.char) throw new Error("missing characteristic");
         }
-        // create list
-        const subscribers = new (0, $99f74415292121e0$export$6b278a59f65cf1eb)();
-        // prepare handler
-        const handler = ()=>{
-            const value = this.char.value;
-            const data = new Uint8Array(value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength));
-            subscribers.dispatch(data);
-        };
-        // subscribe to messages
-        this.char.addEventListener("characteristicvaluechanged", handler);
-        await this.char.startNotifications();
-        // prepare flag
-        let closed = false;
-        // create channel
-        this.ch = {
-            name: ()=>"ble",
-            valid: ()=>{
-                return this.dev.gatt.connected && !closed;
+        let handler = null;
+        let disconnect = null;
+        const transport = {
+            start: async (onData, onClose)=>{
+                handler = ()=>{
+                    const value = this.char.value;
+                    const msg = (0, $99f74415292121e0$export$f69c19e57285b83a).parse(new Uint8Array(value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength)));
+                    if (msg) onData(msg);
+                };
+                disconnect = ()=>{
+                    onClose();
+                };
+                this.char.addEventListener("characteristicvaluechanged", handler);
+                this.dev.addEventListener("gattserverdisconnected", disconnect);
+                await this.char.startNotifications();
             },
-            width () {
-                return 10;
-            },
-            subscribe: (q)=>{
-                subscribers.add(q);
-            },
-            unsubscribe (queue) {
-                subscribers.drop(queue);
-            },
-            write: async (data)=>{
-                await this.char.writeValueWithoutResponse(data);
+            write: async (msg)=>{
+                await this.char.writeValueWithoutResponse(msg.build());
             },
             close: async ()=>{
-                closed = true;
-                this.char.removeEventListener("characteristicvaluechanged", handler);
+                if (handler) this.char.removeEventListener("characteristicvaluechanged", handler);
+                if (disconnect) this.dev.removeEventListener("gattserverdisconnected", disconnect);
                 await this.char.stopNotifications();
-                this.ch = null;
             }
         };
+        this.ch = new (0, $99f74415292121e0$export$cfdacaa37f9b4dd7)(transport, this, 10, ()=>{
+            this.ch = null;
+        });
         return this.ch;
     }
 }
@@ -749,6 +818,12 @@ class $d41f8f42b7b1f821$export$a947a71ad4d6575 {
     id() {
         return "http/" + this.address;
     }
+    type() {
+        return "HTTP";
+    }
+    name() {
+        return "Unnamed";
+    }
     async open() {
         // check channel
         if (this.ch) throw new Error("channel already open");
@@ -759,36 +834,29 @@ class $d41f8f42b7b1f821$export$a947a71ad4d6575 {
             socket.onopen = resolve;
             socket.onerror = reject;
         });
-        // create list
-        const subscribers = new (0, $99f74415292121e0$export$6b278a59f65cf1eb)();
-        // handle messages
-        socket.onmessage = async (msg)=>{
-            const data = new Uint8Array(await msg.data.arrayBuffer());
-            subscribers.dispatch(data);
-        };
-        // create channel
-        this.ch = {
-            name: ()=>"http",
-            valid () {
-                return socket.readyState === WebSocket.OPEN;
+        const transport = {
+            start: (onData, onClose)=>{
+                socket.onmessage = async (msg)=>{
+                    const frame = (0, $99f74415292121e0$export$f69c19e57285b83a).parse(new Uint8Array(await msg.data.arrayBuffer()));
+                    if (frame) onData(frame);
+                };
+                socket.onclose = ()=>{
+                    onClose();
+                };
+                socket.onerror = ()=>{
+                    onClose();
+                };
             },
-            width () {
-                return 10;
-            },
-            subscribe: (q)=>{
-                subscribers.add(q);
-            },
-            unsubscribe (queue) {
-                subscribers.drop(queue);
-            },
-            write: async (data)=>{
-                socket.send(data);
+            write: async (msg)=>{
+                socket.send(msg.build());
             },
             close: async ()=>{
                 socket.close();
-                this.ch = null;
             }
         };
+        this.ch = new (0, $99f74415292121e0$export$cfdacaa37f9b4dd7)(transport, this, 10, ()=>{
+            this.ch = null;
+        });
         return this.ch;
     }
 }
@@ -810,40 +878,49 @@ let $5f0bc7af558cc661$export$96e9906d6d93a972;
 })($5f0bc7af558cc661$export$96e9906d6d93a972 || ($5f0bc7af558cc661$export$96e9906d6d93a972 = {}));
 class $5f0bc7af558cc661$export$1fb4852a55678982 {
     mtu = 0;
-    static async open(ch) {
+    static async open(ch, timeout = 5000) {
         // prepare queue
         const queue = new (0, $99f74415292121e0$export$3dc07afe418952bc)();
         // subscribe to channel
         ch.subscribe(queue);
-        // prepare handle
-        let handle = (0, $fab42eb3dee39b5b$export$4385e60b38654f68)(16);
-        // begin session
-        await (0, $99f74415292121e0$export$68d8715fc104d294)(ch, new (0, $99f74415292121e0$export$f69c19e57285b83a)(0, 0, (0, $fab42eb3dee39b5b$export$fc336dbfaf62f18f)(handle)));
-        // await reply
-        let sid;
-        const deadline = Date.now() + 10000;
-        for(;;){
-            const remaining = deadline - Date.now();
-            if (remaining <= 0) throw new Error("timeout");
-            const reply = await (0, $99f74415292121e0$export$aafa59e2e03f2942)(queue, remaining);
-            if (reply.endpoint === 0 && (0, $fab42eb3dee39b5b$export$f84e8e69fd4488a5)(reply.data) === handle) {
-                sid = reply.session;
-                break;
+        let ok = false;
+        try {
+            // prepare handle
+            const handle = (0, $fab42eb3dee39b5b$export$4385e60b38654f68)(16);
+            // begin session
+            await ch.write(queue, new (0, $99f74415292121e0$export$f69c19e57285b83a)(0, 0, (0, $fab42eb3dee39b5b$export$fc336dbfaf62f18f)(handle)));
+            // await reply
+            let sid;
+            const deadline = Date.now() + timeout;
+            for(;;){
+                const remaining = deadline - Date.now();
+                if (remaining <= 0) throw new Error("timeout");
+                const reply = await (0, $99f74415292121e0$export$aafa59e2e03f2942)(queue, remaining);
+                if (reply.endpoint === 0 && (0, $fab42eb3dee39b5b$export$f84e8e69fd4488a5)(reply.data) === handle) {
+                    sid = reply.session;
+                    break;
+                }
             }
+            ok = true;
+            return new $5f0bc7af558cc661$export$1fb4852a55678982(sid, ch, queue);
+        } finally{
+            if (!ok) ch.unsubscribe(queue);
         }
-        return new $5f0bc7af558cc661$export$1fb4852a55678982(sid, ch, queue);
     }
     constructor(id, ch, qu){
-        this.id = id;
+        this.sid = id;
         this.ch = ch;
         this.qu = qu;
+    }
+    id() {
+        return this.sid;
     }
     channel() {
         return this.ch;
     }
     async ping(timeout = 5000) {
         // write command
-        await (0, $99f74415292121e0$export$68d8715fc104d294)(this.ch, new (0, $99f74415292121e0$export$f69c19e57285b83a)(this.id, 0xfe, null));
+        await this.write(new (0, $99f74415292121e0$export$f69c19e57285b83a)(this.sid, 0xfe, null));
         // read reply
         const msg = await this.read(timeout);
         // verify reply
@@ -852,7 +929,7 @@ class $5f0bc7af558cc661$export$1fb4852a55678982 {
     }
     async query(endpoint, timeout = 5000) {
         // write command
-        await (0, $99f74415292121e0$export$68d8715fc104d294)(this.ch, new (0, $99f74415292121e0$export$f69c19e57285b83a)(this.id, endpoint, null));
+        await this.write(new (0, $99f74415292121e0$export$f69c19e57285b83a)(this.sid, endpoint, null));
         // read reply
         const msg = await this.read(timeout);
         // verify reply
@@ -885,7 +962,7 @@ class $5f0bc7af558cc661$export$1fb4852a55678982 {
     }
     async send(endpoint, data, ackTimeout) {
         // write message
-        await (0, $99f74415292121e0$export$68d8715fc104d294)(this.ch, new (0, $99f74415292121e0$export$f69c19e57285b83a)(this.id, endpoint, data));
+        await this.write(new (0, $99f74415292121e0$export$f69c19e57285b83a)(this.sid, endpoint, data));
         // return if timeout is zero
         if (ackTimeout === 0) return;
         // await reply
@@ -931,23 +1008,27 @@ class $5f0bc7af558cc661$export$1fb4852a55678982 {
         return this.mtu;
     }
     async end(timeout = 5000) {
-        // write command
-        await (0, $99f74415292121e0$export$68d8715fc104d294)(this.ch, new (0, $99f74415292121e0$export$f69c19e57285b83a)(this.id, 0xff, null));
-        // read reply
-        const msg = await this.read(timeout);
-        // verify reply
-        if (msg.endpoint !== 0xff || msg.size() > 0) throw new Error("invalid reply");
-        // unsubscribe from channel
-        this.ch.unsubscribe(this.qu);
+        try {
+            // write command
+            await this.write(new (0, $99f74415292121e0$export$f69c19e57285b83a)(this.sid, 0xff, null));
+            // return if timeout is zero
+            if (timeout === 0) return;
+            // read reply
+            const msg = await this.read(timeout);
+            // verify reply
+            if (msg.endpoint !== 0xff || msg.size() > 0) throw new Error("invalid reply");
+        } finally{
+            // unsubscribe from channel
+            this.ch.unsubscribe(this.qu);
+        }
     }
     async read(timeout) {
-        const deadline = Date.now() + timeout;
-        for(;;){
-            const remaining = deadline - Date.now();
-            if (remaining <= 0) throw new Error("timeout");
-            const msg = await (0, $99f74415292121e0$export$aafa59e2e03f2942)(this.qu, remaining);
-            if (msg.session === this.id) return msg;
-        }
+        const msg = await (0, $99f74415292121e0$export$aafa59e2e03f2942)(this.qu, timeout);
+        if (msg.session !== this.sid) throw new Error("invalid message");
+        return msg;
+    }
+    async write(msg) {
+        await this.ch.write(this.qu, msg);
     }
 }
 function $5f0bc7af558cc661$var$parseError(num) {
@@ -971,26 +1052,35 @@ class $eb2d9580c7f35431$export$86abcda9a311d473 {
     queue = new (0, $hgUW1$Queue)();
     constructor(device){
         // set device
-        this.device = device;
+        this.dev = device;
         // start pinger
         this.pinger = setInterval(async ()=>{
             if (this.active()) try {
                 await this.useSession(async (session)=>{
-                    await session.ping(1000);
+                    await session.ping(5000);
                 });
             } catch (e) {
             // ignore ping errors
             }
-        }, 5000);
+        }, 1000);
+    }
+    device() {
+        return this.dev;
     }
     async activate() {
         // check state
         if (this.active()) return;
         // open channel
-        this.channel = await this.device.open();
+        this.channel = await this.dev.open();
     }
     active() {
         return this.channel != null;
+    }
+    hasSession() {
+        return this.session != null;
+    }
+    setPassword(password) {
+        this.password = password;
     }
     async locked() {
         // check state
@@ -1014,11 +1104,11 @@ class $eb2d9580c7f35431$export$86abcda9a311d473 {
         if (unlocked) this.password = password;
         return unlocked;
     }
-    async newSession() {
+    async newSession(timeout = 5000) {
         // check state
         if (!this.active()) throw new Error("device not active");
         // open new session
-        const session = await (0, $5f0bc7af558cc661$export$1fb4852a55678982).open(this.channel);
+        const session = await (0, $5f0bc7af558cc661$export$1fb4852a55678982).open(this.channel, timeout);
         // get session status
         let status = await session.status(1000);
         // try to unlock if password is available and locked
@@ -1071,7 +1161,8 @@ class $eb2d9580c7f35431$export$86abcda9a311d473 {
         // stop pinger
         clearInterval(this.pinger);
         // clear device
-        this.device = null;
+        this.dev = null;
+        this.password = null;
     }
 }
 
@@ -1183,6 +1274,7 @@ async function $8d0624ae1e205836$export$eeadd579e8255396(s, ref, timeout = 5000)
 async function $8d0624ae1e205836$export$f256fc0d3bd6d2ee(s, ref, timeout = 5000) {
     // receive value
     const reply = await $8d0624ae1e205836$export$eeadd579e8255396(s, ref, timeout);
+    if (reply.length % 4 !== 0) throw new Error(`invalid metric payload length: ${reply.length}`);
     // convert reply
     let list = [];
     const view = (0, $fab42eb3dee39b5b$export$9bcaddb313b2c51f)(reply);
@@ -1192,6 +1284,7 @@ async function $8d0624ae1e205836$export$f256fc0d3bd6d2ee(s, ref, timeout = 5000)
 async function $8d0624ae1e205836$export$8b987d10383d7b6c(s, ref, timeout = 5000) {
     // receive value
     const reply = await $8d0624ae1e205836$export$eeadd579e8255396(s, ref, timeout);
+    if (reply.length % 4 !== 0) throw new Error(`invalid metric payload length: ${reply.length}`);
     // convert reply
     let list = [];
     const view = (0, $fab42eb3dee39b5b$export$9bcaddb313b2c51f)(reply);
@@ -1201,6 +1294,7 @@ async function $8d0624ae1e205836$export$8b987d10383d7b6c(s, ref, timeout = 5000)
 async function $8d0624ae1e205836$export$c30d31b1766da0ac(s, ref, timeout = 5000) {
     // receive value
     const reply = await $8d0624ae1e205836$export$eeadd579e8255396(s, ref, timeout);
+    if (reply.length % 8 !== 0) throw new Error(`invalid metric payload length: ${reply.length}`);
     // convert reply
     let list = [];
     const view = (0, $fab42eb3dee39b5b$export$9bcaddb313b2c51f)(reply);
@@ -1238,6 +1332,13 @@ let $50b2a1fcb8a69e99$export$e64bf06489774cd7;
     ParamMode[ParamMode["application"] = 4] = "application";
     ParamMode[ParamMode["locked"] = 16] = "locked";
 })($50b2a1fcb8a69e99$export$e64bf06489774cd7 || ($50b2a1fcb8a69e99$export$e64bf06489774cd7 = {}));
+function $50b2a1fcb8a69e99$var$validParamType(type) {
+    return type === $50b2a1fcb8a69e99$export$426dc07f493a4c47.raw || type === $50b2a1fcb8a69e99$export$426dc07f493a4c47.string || type === $50b2a1fcb8a69e99$export$426dc07f493a4c47.bool || type === $50b2a1fcb8a69e99$export$426dc07f493a4c47.long || type === $50b2a1fcb8a69e99$export$426dc07f493a4c47.double || type === $50b2a1fcb8a69e99$export$426dc07f493a4c47.action;
+}
+function $50b2a1fcb8a69e99$var$validParamMode(mode) {
+    const mask = $50b2a1fcb8a69e99$export$e64bf06489774cd7.volatile | $50b2a1fcb8a69e99$export$e64bf06489774cd7.system | $50b2a1fcb8a69e99$export$e64bf06489774cd7.application | $50b2a1fcb8a69e99$export$e64bf06489774cd7.locked;
+    return (mode & ~mask) === 0;
+}
 async function $50b2a1fcb8a69e99$export$ecf541e09a511845(s, name, timeout = 5000) {
     // prepare command
     const cmd = (0, $fab42eb3dee39b5b$export$2a703dbb0cb35339)("os", 0, name);
@@ -1269,7 +1370,8 @@ async function $50b2a1fcb8a69e99$export$2428fb4221ce57da(s, timeout = 5000) {
         const type = reply[1];
         const mode = reply[2];
         const name = (0, $fab42eb3dee39b5b$export$f84e8e69fd4488a5)(reply.slice(3));
-        // TODO: Check type and mode.
+        // check type and mode
+        if (!$50b2a1fcb8a69e99$var$validParamType(type) || !$50b2a1fcb8a69e99$var$validParamMode(mode)) throw new Error("invalid type or mode");
         // append info
         list.push({
             ref: ref,
@@ -1298,7 +1400,10 @@ async function $50b2a1fcb8a69e99$export$bf720df32fb7816d(s, refs, since, timeout
     let map = (BigInt(1) << BigInt(64)) - BigInt(1);
     if (refs.length > 0) {
         map = BigInt(0);
-        for (const ref of refs)map |= BigInt(1) << BigInt(ref);
+        for (const ref of refs){
+            if (ref >= 64) throw new Error(`ref ${ref} exceeds bitmap capacity`);
+            map |= BigInt(1) << BigInt(ref);
+        }
     }
     // prepare command
     const cmd = (0, $fab42eb3dee39b5b$export$2a703dbb0cb35339)("oqq", 5, map, since);
@@ -1381,7 +1486,15 @@ class $668c9db91c0d9266$export$1ff2b8f5c3b1fa7d {
         this.device = device;
     }
     id() {
-        return `${this.host.device.id()}/${this.device}`;
+        const host = this.host.device();
+        if (!host) throw new Error("device not available");
+        return `${host.id()}/${this.device}`;
+    }
+    type() {
+        return "Relay";
+    }
+    name() {
+        return `Relay: ${this.device}`;
     }
     async open() {
         // check channel
@@ -1390,41 +1503,26 @@ class $668c9db91c0d9266$export$1ff2b8f5c3b1fa7d {
         const session = await this.host.newSession();
         // link device
         await $668c9db91c0d9266$export$dc8e2aaa3d21f156(session, this.device);
-        // create list
-        const subscribers = new (0, $99f74415292121e0$export$6b278a59f65cf1eb)();
-        // prepare flag
         let closed = false;
-        // run receiver
-        (async ()=>{
-            while(!closed)try {
-                const data = await $668c9db91c0d9266$export$f4bfe48ee3ba03ae(session);
-                subscribers.dispatch(data);
-            } catch (e) {
-                if (!closed) console.error(e);
-                break;
-            }
-        })().catch(()=>{});
-        // create channel
-        this.ch = {
-            name: ()=>"relay",
-            valid () {
-                return !closed;
+        const transport = {
+            start: (onData, onClose)=>{
+                (async ()=>{
+                    while(!closed)try {
+                        const msg = (0, $99f74415292121e0$export$f69c19e57285b83a).parse(await $668c9db91c0d9266$export$f4bfe48ee3ba03ae(session));
+                        if (msg) onData(msg);
+                    } catch (e) {
+                        if (!closed) console.error(e);
+                        closed = true;
+                        onClose();
+                        break;
+                    }
+                })().catch(()=>{});
             },
-            width () {
-                return 10;
-            },
-            subscribe: (q)=>{
-                subscribers.add(q);
-            },
-            unsubscribe (queue) {
-                subscribers.drop(queue);
-            },
-            write: async (data)=>{
-                await $668c9db91c0d9266$export$3893590a1ae926f1(session, this.device, data);
+            write: async (msg)=>{
+                await $668c9db91c0d9266$export$3893590a1ae926f1(session, this.device, msg.build());
             },
             close: async ()=>{
                 closed = true;
-                this.ch = null;
                 try {
                     await session.end(1000);
                 } catch (e) {
@@ -1432,6 +1530,9 @@ class $668c9db91c0d9266$export$1ff2b8f5c3b1fa7d {
                 }
             }
         };
+        this.ch = new (0, $99f74415292121e0$export$cfdacaa37f9b4dd7)(transport, this, 10, ()=>{
+            this.ch = null;
+        });
         return this.ch;
     }
 }
@@ -1472,6 +1573,13 @@ class $f1b85200f32d8427$export$61b0d7921fd6a089 {
         const info = this.port.getInfo();
         return `serial/${info.usbProductId ?? "unknown"}`;
     }
+    type() {
+        return "Serial";
+    }
+    name() {
+        const info = this.port.getInfo();
+        return `${info.usbProductId ?? "unknown"}`;
+    }
     async open() {
         // check channel
         if (this.ch) throw new Error("channel already open");
@@ -1479,14 +1587,10 @@ class $f1b85200f32d8427$export$61b0d7921fd6a089 {
         if (!this.port.readable) await this.port.open({
             baudRate: this.baudRate
         });
-        // create list
-        const subscribers = new (0, $99f74415292121e0$export$6b278a59f65cf1eb)();
         // create reader
         const reader = this.port.readable.getReader();
-        // track reader state
-        let alive = true;
         // read data
-        const read = async ()=>{
+        const read = async (onData, onClose)=>{
             try {
                 let buffer = "";
                 while(true){
@@ -1501,7 +1605,8 @@ class $f1b85200f32d8427$export$61b0d7921fd6a089 {
                     for(let i = 0; i < lines.length - 1; i++){
                         const line = lines[i].replace(/\r$/, "");
                         if (line.startsWith("NAOS!")) try {
-                            subscribers.dispatch((0, $fab42eb3dee39b5b$export$c537b38001c583b7)(line.slice(5)));
+                            const msg = (0, $99f74415292121e0$export$f69c19e57285b83a).parse((0, $fab42eb3dee39b5b$export$c537b38001c583b7)(line.slice(5)));
+                            if (msg) onData(msg);
                         } catch (err) {
                             console.error("Error decoding message:", err);
                         }
@@ -1512,40 +1617,29 @@ class $f1b85200f32d8427$export$61b0d7921fd6a089 {
             } catch (err) {
                 console.error("Error reading stream:", err);
             } finally{
-                alive = false;
+                onClose();
                 reader.releaseLock();
             }
         };
-        // start reading
-        read().catch(()=>{});
         // create writer
         const writer = this.port.writable.getWriter();
-        // create channel
-        this.ch = {
-            name: ()=>"serial",
-            valid () {
-                return alive;
+        const transport = {
+            start: (onData, onClose)=>{
+                read(onData, onClose).catch(()=>{});
             },
-            width () {
-                return 1;
-            },
-            subscribe: (q)=>{
-                subscribers.add(q);
-            },
-            unsubscribe (queue) {
-                subscribers.drop(queue);
-            },
-            write: async (data)=>{
-                await writer.write((0, $fab42eb3dee39b5b$export$ee1b3e54f0441b22)((0, $fab42eb3dee39b5b$export$fc336dbfaf62f18f)("\nNAOS!"), (0, $fab42eb3dee39b5b$export$37cc283d8fbd3462)(data), (0, $fab42eb3dee39b5b$export$fc336dbfaf62f18f)("\n")));
+            write: async (msg)=>{
+                await writer.write((0, $fab42eb3dee39b5b$export$ee1b3e54f0441b22)((0, $fab42eb3dee39b5b$export$fc336dbfaf62f18f)("\nNAOS!"), (0, $fab42eb3dee39b5b$export$37cc283d8fbd3462)(msg.build()), (0, $fab42eb3dee39b5b$export$fc336dbfaf62f18f)("\n")));
             },
             close: async ()=>{
                 await writer.close();
                 writer.releaseLock();
                 await reader.cancel();
-                // lock released by reader
-                this.ch = null;
+            // lock released by reader
             }
         };
+        this.ch = new (0, $99f74415292121e0$export$cfdacaa37f9b4dd7)(transport, this, 1, ()=>{
+            this.ch = null;
+        });
         return this.ch;
     }
 }
@@ -1595,5 +1689,5 @@ async function $e1163a73e33a3ccf$export$722fbec263ad908a(session, data, report, 
 
 
 
-export {$aa9ad2c21d2bf2d7$export$3ed79f77b3338468 as authStatus, $aa9ad2c21d2bf2d7$export$92cac5b0a55d7f50 as authProvision, $aa9ad2c21d2bf2d7$export$4d11934c049ffae2 as authDescribe, $aa9ad2c21d2bf2d7$export$db2de38840edd6a5 as authAttest, $9224a2c5eeae1672$export$b699ee72de2ebcbd as bleRequest, $9224a2c5eeae1672$export$926ab273976713de as BLEDevice, $e7d69bb808fab13a$export$ccbf702e39e5c28d as checkCoredump, $e7d69bb808fab13a$export$197b71d4e34c9ea3 as readCoredump, $e7d69bb808fab13a$export$56b3ad8bf7c85b76 as deleteCoredump, $e7d69bb808fab13a$export$29c260b0529fb76 as streamLog, $99f74415292121e0$export$3dc07afe418952bc as Queue, $99f74415292121e0$export$6b278a59f65cf1eb as QueueList, $99f74415292121e0$export$f69c19e57285b83a as Message, $99f74415292121e0$export$aafa59e2e03f2942 as read, $99f74415292121e0$export$68d8715fc104d294 as write, $189005054305d286$export$3cc322771f0aca5b as statPath, $189005054305d286$export$d00618d8d97ebf68 as listDir, $189005054305d286$export$72c04af63de9061a as readFile, $189005054305d286$export$ec88705ee4409f46 as readFileRange, $189005054305d286$export$552bfb764b5cd2b4 as writeFile, $189005054305d286$export$e355e6d7686ffc32 as renamePath, $189005054305d286$export$5c4e774b0e27d36b as removePath, $189005054305d286$export$3b8a92549237260e as sha256File, $189005054305d286$export$aa9bab72412f5613 as makePath, $d41f8f42b7b1f821$export$de43e2bbe0f84dac as makeHTTPDevice, $d41f8f42b7b1f821$export$a947a71ad4d6575 as HTTPDevice, $eb2d9580c7f35431$export$86abcda9a311d473 as ManagedDevice, $8d0624ae1e205836$export$70d6e7a2b8980af6 as MetricKind, $8d0624ae1e205836$export$777f07137a9ea427 as MetricType, $8d0624ae1e205836$export$fdc72cc32fab8771 as listMetrics, $8d0624ae1e205836$export$73d94888757c6215 as describeMetric, $8d0624ae1e205836$export$eeadd579e8255396 as readMetrics, $8d0624ae1e205836$export$f256fc0d3bd6d2ee as readLongMetrics, $8d0624ae1e205836$export$8b987d10383d7b6c as readFloatMetrics, $8d0624ae1e205836$export$c30d31b1766da0ac as readDoubleMetrics, $50b2a1fcb8a69e99$export$426dc07f493a4c47 as ParamType, $50b2a1fcb8a69e99$export$e64bf06489774cd7 as ParamMode, $50b2a1fcb8a69e99$export$ecf541e09a511845 as getParam, $50b2a1fcb8a69e99$export$260ce70ca30cd65 as setParam, $50b2a1fcb8a69e99$export$2428fb4221ce57da as listParams, $50b2a1fcb8a69e99$export$a44436b1b8efd60b as readParam, $50b2a1fcb8a69e99$export$eb49a0586a768c1b as writeParam, $50b2a1fcb8a69e99$export$bf720df32fb7816d as collectParams, $50b2a1fcb8a69e99$export$8ec074d96e3cb6b5 as clearParam, $89603ac6c30e3b84$export$c24e73273208a9bb as AsyncQueue, $668c9db91c0d9266$export$4cf517c8376bfd0 as scanRelay, $668c9db91c0d9266$export$dc8e2aaa3d21f156 as linkRelay, $668c9db91c0d9266$export$3893590a1ae926f1 as sendRelay, $668c9db91c0d9266$export$f4bfe48ee3ba03ae as receiveRelay, $668c9db91c0d9266$export$1ff2b8f5c3b1fa7d as RelayDevice, $f1b85200f32d8427$export$989790aac965fb4 as serialRequest, $f1b85200f32d8427$export$61b0d7921fd6a089 as SerialDevice, $5f0bc7af558cc661$export$96e9906d6d93a972 as Status, $5f0bc7af558cc661$export$1fb4852a55678982 as Session, $e1163a73e33a3ccf$export$722fbec263ad908a as update, $fab42eb3dee39b5b$export$fc336dbfaf62f18f as toBuffer, $fab42eb3dee39b5b$export$f84e8e69fd4488a5 as toString, $fab42eb3dee39b5b$export$37cc283d8fbd3462 as toBase64, $fab42eb3dee39b5b$export$c537b38001c583b7 as fromBase64, $fab42eb3dee39b5b$export$ee1b3e54f0441b22 as concat, $fab42eb3dee39b5b$export$4385e60b38654f68 as random, $fab42eb3dee39b5b$export$66b0e5ed4f34432a as secureRandom, $fab42eb3dee39b5b$export$e10eb67e19628714 as hmac256, $fab42eb3dee39b5b$export$dd4f63edb9ba1490 as requestFile, $fab42eb3dee39b5b$export$2a703dbb0cb35339 as pack, $fab42eb3dee39b5b$export$9bcaddb313b2c51f as toView, $fab42eb3dee39b5b$export$417857010dc9287f as unpack, $fab42eb3dee39b5b$export$398604a469f7de9a as compare};
+export {$aa9ad2c21d2bf2d7$export$3ed79f77b3338468 as authStatus, $aa9ad2c21d2bf2d7$export$92cac5b0a55d7f50 as authProvision, $aa9ad2c21d2bf2d7$export$4d11934c049ffae2 as authDescribe, $aa9ad2c21d2bf2d7$export$db2de38840edd6a5 as authAttest, $9224a2c5eeae1672$export$b699ee72de2ebcbd as bleRequest, $9224a2c5eeae1672$export$926ab273976713de as BLEDevice, $e7d69bb808fab13a$export$ccbf702e39e5c28d as checkCoredump, $e7d69bb808fab13a$export$197b71d4e34c9ea3 as readCoredump, $e7d69bb808fab13a$export$56b3ad8bf7c85b76 as deleteCoredump, $e7d69bb808fab13a$export$29c260b0529fb76 as streamLog, $99f74415292121e0$export$3dc07afe418952bc as Queue, $99f74415292121e0$export$f69c19e57285b83a as Message, $99f74415292121e0$export$cfdacaa37f9b4dd7 as Channel, $99f74415292121e0$export$aafa59e2e03f2942 as read, $189005054305d286$export$3cc322771f0aca5b as statPath, $189005054305d286$export$d00618d8d97ebf68 as listDir, $189005054305d286$export$72c04af63de9061a as readFile, $189005054305d286$export$ec88705ee4409f46 as readFileRange, $189005054305d286$export$552bfb764b5cd2b4 as writeFile, $189005054305d286$export$e355e6d7686ffc32 as renamePath, $189005054305d286$export$5c4e774b0e27d36b as removePath, $189005054305d286$export$3b8a92549237260e as sha256File, $189005054305d286$export$aa9bab72412f5613 as makePath, $d41f8f42b7b1f821$export$de43e2bbe0f84dac as makeHTTPDevice, $d41f8f42b7b1f821$export$a947a71ad4d6575 as HTTPDevice, $eb2d9580c7f35431$export$86abcda9a311d473 as ManagedDevice, $8d0624ae1e205836$export$70d6e7a2b8980af6 as MetricKind, $8d0624ae1e205836$export$777f07137a9ea427 as MetricType, $8d0624ae1e205836$export$fdc72cc32fab8771 as listMetrics, $8d0624ae1e205836$export$73d94888757c6215 as describeMetric, $8d0624ae1e205836$export$eeadd579e8255396 as readMetrics, $8d0624ae1e205836$export$f256fc0d3bd6d2ee as readLongMetrics, $8d0624ae1e205836$export$8b987d10383d7b6c as readFloatMetrics, $8d0624ae1e205836$export$c30d31b1766da0ac as readDoubleMetrics, $50b2a1fcb8a69e99$export$426dc07f493a4c47 as ParamType, $50b2a1fcb8a69e99$export$e64bf06489774cd7 as ParamMode, $50b2a1fcb8a69e99$export$ecf541e09a511845 as getParam, $50b2a1fcb8a69e99$export$260ce70ca30cd65 as setParam, $50b2a1fcb8a69e99$export$2428fb4221ce57da as listParams, $50b2a1fcb8a69e99$export$a44436b1b8efd60b as readParam, $50b2a1fcb8a69e99$export$eb49a0586a768c1b as writeParam, $50b2a1fcb8a69e99$export$bf720df32fb7816d as collectParams, $50b2a1fcb8a69e99$export$8ec074d96e3cb6b5 as clearParam, $89603ac6c30e3b84$export$c24e73273208a9bb as AsyncQueue, $668c9db91c0d9266$export$4cf517c8376bfd0 as scanRelay, $668c9db91c0d9266$export$dc8e2aaa3d21f156 as linkRelay, $668c9db91c0d9266$export$3893590a1ae926f1 as sendRelay, $668c9db91c0d9266$export$f4bfe48ee3ba03ae as receiveRelay, $668c9db91c0d9266$export$1ff2b8f5c3b1fa7d as RelayDevice, $f1b85200f32d8427$export$989790aac965fb4 as serialRequest, $f1b85200f32d8427$export$61b0d7921fd6a089 as SerialDevice, $5f0bc7af558cc661$export$96e9906d6d93a972 as Status, $5f0bc7af558cc661$export$1fb4852a55678982 as Session, $e1163a73e33a3ccf$export$722fbec263ad908a as update, $fab42eb3dee39b5b$export$fc336dbfaf62f18f as toBuffer, $fab42eb3dee39b5b$export$f84e8e69fd4488a5 as toString, $fab42eb3dee39b5b$export$37cc283d8fbd3462 as toBase64, $fab42eb3dee39b5b$export$c537b38001c583b7 as fromBase64, $fab42eb3dee39b5b$export$ee1b3e54f0441b22 as concat, $fab42eb3dee39b5b$export$4385e60b38654f68 as random, $fab42eb3dee39b5b$export$66b0e5ed4f34432a as secureRandom, $fab42eb3dee39b5b$export$e10eb67e19628714 as hmac256, $fab42eb3dee39b5b$export$dd4f63edb9ba1490 as requestFile, $fab42eb3dee39b5b$export$2a703dbb0cb35339 as pack, $fab42eb3dee39b5b$export$9bcaddb313b2c51f as toView, $fab42eb3dee39b5b$export$417857010dc9287f as unpack, $fab42eb3dee39b5b$export$398604a469f7de9a as compare};
 //# sourceMappingURL=main.js.map
