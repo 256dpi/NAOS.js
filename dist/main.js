@@ -397,6 +397,7 @@ class $99f74415292121e0$export$cfdacaa37f9b4dd7 {
         } catch (err) {
             if (msg.session === 0 && msg.endpoint === 0x0 && this.opening.get(msg.data ? (0, $fab42eb3dee39b5b$export$f84e8e69fd4488a5)(msg.data) : "") === queue) this.opening.delete(msg.data ? (0, $fab42eb3dee39b5b$export$f84e8e69fd4488a5)(msg.data) : "");
             if (msg.session !== 0 && msg.endpoint === 0xff && this.closing.get(msg.session) === queue) this.closing.delete(msg.session);
+            await this.close();
             throw err;
         }
     }
@@ -804,7 +805,9 @@ async function $189005054305d286$export$aa9bab72412f5613(session, path) {
 }
 async function $189005054305d286$var$send(session, data, awaitAck, timeout = 5000) {
     // send command
-    await session.send($189005054305d286$var$fsEndpoint, data, awaitAck ? timeout : 0);
+    await session.send($189005054305d286$var$fsEndpoint, data, 0);
+    // await ack
+    if (awaitAck) await $189005054305d286$var$receive(session, true, timeout);
 }
 
 
@@ -831,7 +834,7 @@ class $d41f8f42b7b1f821$export$a947a71ad4d6575 {
         // check channel
         if (this.ch) throw new Error("channel already open");
         // create socket
-        const socket = new WebSocket("ws://" + this.address);
+        const socket = new WebSocket("ws://" + this.address, "naos");
         // await connections
         await new Promise((resolve, reject)=>{
             socket.onopen = resolve;
@@ -1060,17 +1063,22 @@ class $eb2d9580c7f35431$export$86abcda9a311d473 {
         // set device
         this.dev = device;
         // start pinger
-        this.pinger = setInterval(async ()=>{
-            if (this.session) try {
-                await this.session.ping(5000);
-            } catch (e) {
+        this.pinger = setInterval(()=>{
+            this.queue.run(async ()=>{
+                if (!this.session) return;
                 try {
-                    await this.session.end(1000);
+                    await this.session.ping(5000);
                 } catch (e) {
-                // ignore
+                    try {
+                        await this.session.end(0);
+                    } catch (e) {
+                    // ignore
+                    }
+                    this.session = null;
                 }
-                this.session = null;
-            }
+            }).catch(()=>{
+            // ignore after stop/deactivate races
+            });
         }, 5000);
     }
     device() {
@@ -1213,7 +1221,7 @@ class $eb2d9580c7f35431$export$86abcda9a311d473 {
             } catch (e) {
                 // close session
                 try {
-                    await this.session.end(1000);
+                    await this.session.end(0);
                 } catch (e) {
                 // ignore
                 }

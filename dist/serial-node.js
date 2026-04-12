@@ -306,6 +306,7 @@ class $aa2d5532cb55e3ab$export$cfdacaa37f9b4dd7 {
         } catch (err) {
             if (msg.session === 0 && msg.endpoint === 0x0 && this.opening.get(msg.data ? (0, $6b0ddb031a0df909$export$f84e8e69fd4488a5)(msg.data) : "") === queue) this.opening.delete(msg.data ? (0, $6b0ddb031a0df909$export$f84e8e69fd4488a5)(msg.data) : "");
             if (msg.session !== 0 && msg.endpoint === 0xff && this.closing.get(msg.session) === queue) this.closing.delete(msg.session);
+            await this.close();
             throw err;
         }
     }
