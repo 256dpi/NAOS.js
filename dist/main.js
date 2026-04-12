@@ -749,9 +749,9 @@ async function $189005054305d286$export$552bfb764b5cd2b4(session, file, data, re
         let chunkSize = Math.min(mtu, data.byteLength - offset);
         let chunkData = data.slice(offset, offset + chunkSize);
         // determine mode
-        let acked = num % width === 0;
-        // prepare "write" command (acked or silent & sequential)
-        cmd = (0, $fab42eb3dee39b5b$export$2a703dbb0cb35339)("ooib", 4, acked ? 0 : 3, offset, chunkData);
+        let acked = num % width === 0 || offset + chunkSize >= data.byteLength;
+        // prepare "write" command (sequential or silent & sequential)
+        cmd = (0, $fab42eb3dee39b5b$export$2a703dbb0cb35339)("ooib", 4, acked ? 2 : 3, offset, chunkData);
         // send "write" command
         await $189005054305d286$var$send(session, cmd, false);
         // receive ack or "error" replies
@@ -770,9 +770,7 @@ async function $189005054305d286$export$552bfb764b5cd2b4(session, file, data, re
 async function $189005054305d286$export$e355e6d7686ffc32(session, from, to) {
     // send command
     let cmd = (0, $fab42eb3dee39b5b$export$2a703dbb0cb35339)("osos", 6, from, 0, to);
-    await $189005054305d286$var$send(session, cmd, false);
-    // await reply
-    await $189005054305d286$var$receive(session, true);
+    await $189005054305d286$var$send(session, cmd, true);
 }
 async function $189005054305d286$export$5c4e774b0e27d36b(session, path) {
     // send command

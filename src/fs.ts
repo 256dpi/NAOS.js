@@ -199,10 +199,10 @@ export async function writeFile(
     let chunkData = data.slice(offset, offset + chunkSize);
 
     // determine mode
-    let acked = num % width === 0;
+    let acked = num % width === 0 || offset + chunkSize >= data.byteLength;
 
-    // prepare "write" command (acked or silent & sequential)
-    cmd = pack("ooib", 4, acked ? 0 : (1 << 0) | (1 << 1), offset, chunkData);
+    // prepare "write" command (sequential or silent & sequential)
+    cmd = pack("ooib", 4, acked ? 1 << 1 : (1 << 0) | (1 << 1), offset, chunkData);
 
     // send "write" command
     await send(session, cmd, false);
@@ -232,10 +232,7 @@ export async function writeFile(
 export async function renamePath(session: Session, from: string, to: string) {
   // send command
   let cmd = pack("osos", 6, from, 0, to);
-  await send(session, cmd, false);
-
-  // await reply
-  await receive(session, true);
+  await send(session, cmd, true);
 }
 
 export async function removePath(session: Session, path: string) {
