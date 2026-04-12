@@ -1,5 +1,6 @@
 import {Queue as $hgUW1$Queue} from "async-await-queue";
 
+
 function $parcel$export(e, n, v, s) {
   Object.defineProperty(e, n, {get: v, set: s, enumerable: true, configurable: true});
 }
@@ -280,8 +281,6 @@ var $89603ac6c30e3b84$exports = {};
 
 $parcel$export($89603ac6c30e3b84$exports, "AsyncQueue", () => $89603ac6c30e3b84$export$c24e73273208a9bb);
 class $89603ac6c30e3b84$export$c24e73273208a9bb {
-    queue = [];
-    waiters = [];
     push(item) {
         // add to back
         this.queue.push(item);
@@ -306,6 +305,10 @@ class $89603ac6c30e3b84$export$c24e73273208a9bb {
                 }
             }, timeout);
         });
+    }
+    constructor(){
+        this.queue = [];
+        this.waiters = [];
     }
 }
 
@@ -340,13 +343,13 @@ class $99f74415292121e0$export$f69c19e57285b83a {
     }
 }
 class $99f74415292121e0$export$cfdacaa37f9b4dd7 {
-    closed = false;
-    doneResolve = null;
-    queues = new Set();
-    opening = new Map();
-    sessions = new Map();
-    closing = new Map();
     constructor(tr, device, width, onClose){
+        this.closed = false;
+        this.doneResolve = null;
+        this.queues = new Set();
+        this.opening = new Map();
+        this.sessions = new Map();
+        this.closing = new Map();
         this.tr = tr;
         this.dev = device;
         this.widthValue = width;
@@ -471,10 +474,10 @@ async function $9224a2c5eeae1672$export$b699ee72de2ebcbd(bt) {
     return new $9224a2c5eeae1672$export$926ab273976713de(dev);
 }
 class $9224a2c5eeae1672$export$926ab273976713de {
-    svc = null;
-    char = null;
-    ch = null;
     constructor(dev){
+        this.svc = null;
+        this.char = null;
+        this.ch = null;
         // store device
         this.dev = dev;
         // close open channel and clear stale GATT state if disconnected
@@ -814,8 +817,8 @@ var $d41f8f42b7b1f821$exports = {};
 $parcel$export($d41f8f42b7b1f821$exports, "HTTPDevice", () => $d41f8f42b7b1f821$export$a947a71ad4d6575);
 
 class $d41f8f42b7b1f821$export$a947a71ad4d6575 {
-    ch = null;
     constructor(address){
+        this.ch = null;
         // store address
         this.address = address;
     }
@@ -876,12 +879,11 @@ $parcel$export($5f0bc7af558cc661$exports, "Status", () => $5f0bc7af558cc661$expo
 $parcel$export($5f0bc7af558cc661$exports, "Session", () => $5f0bc7af558cc661$export$1fb4852a55678982);
 
 
-let $5f0bc7af558cc661$export$96e9906d6d93a972;
-(function(Status) {
+var $5f0bc7af558cc661$export$96e9906d6d93a972 = /*#__PURE__*/ function(Status) {
     Status[Status["locked"] = 1] = "locked";
-})($5f0bc7af558cc661$export$96e9906d6d93a972 || ($5f0bc7af558cc661$export$96e9906d6d93a972 = {}));
+    return Status;
+}({});
 class $5f0bc7af558cc661$export$1fb4852a55678982 {
-    mtu = 0;
     static async open(ch, timeout = 5000) {
         // prepare queue
         const queue = new (0, $99f74415292121e0$export$3dc07afe418952bc)();
@@ -912,6 +914,7 @@ class $5f0bc7af558cc661$export$1fb4852a55678982 {
         }
     }
     constructor(id, ch, qu){
+        this.mtu = 0;
         this.sid = id;
         this.ch = ch;
         this.qu = qu;
@@ -1052,12 +1055,12 @@ function $5f0bc7af558cc661$var$parseError(num) {
 
 
 class $eb2d9580c7f35431$export$86abcda9a311d473 {
-    password = null;
-    _locked = false;
-    queue = new (0, $hgUW1$Queue)();
-    subs = [];
-    stopped = false;
     constructor(device){
+        this.password = null;
+        this._locked = false;
+        this.queue = new (0, $hgUW1$Queue)();
+        this.subs = [];
+        this.stopped = false;
         // set device
         this.dev = device;
         // start pinger
@@ -1292,17 +1295,17 @@ $parcel$export($8d0624ae1e205836$exports, "readFloatMetrics", () => $8d0624ae1e2
 $parcel$export($8d0624ae1e205836$exports, "readDoubleMetrics", () => $8d0624ae1e205836$export$c30d31b1766da0ac);
 
 const $8d0624ae1e205836$var$metricsEndpoint = 0x05;
-let $8d0624ae1e205836$export$70d6e7a2b8980af6;
-(function(MetricKind) {
+var $8d0624ae1e205836$export$70d6e7a2b8980af6 = /*#__PURE__*/ function(MetricKind) {
     MetricKind[MetricKind["counter"] = 0] = "counter";
     MetricKind[MetricKind["gauge"] = 1] = "gauge";
-})($8d0624ae1e205836$export$70d6e7a2b8980af6 || ($8d0624ae1e205836$export$70d6e7a2b8980af6 = {}));
-let $8d0624ae1e205836$export$777f07137a9ea427;
-(function(MetricType) {
+    return MetricKind;
+}({});
+var $8d0624ae1e205836$export$777f07137a9ea427 = /*#__PURE__*/ function(MetricType) {
     MetricType[MetricType["long"] = 0] = "long";
     MetricType[MetricType["float"] = 1] = "float";
     MetricType[MetricType["double"] = 2] = "double";
-})($8d0624ae1e205836$export$777f07137a9ea427 || ($8d0624ae1e205836$export$777f07137a9ea427 = {}));
+    return MetricType;
+}({});
 async function $8d0624ae1e205836$export$fdc72cc32fab8771(s, timeout = 5000) {
     // send command
     const cmd = (0, $fab42eb3dee39b5b$export$2a703dbb0cb35339)("o", 0);
@@ -1429,27 +1432,27 @@ $parcel$export($50b2a1fcb8a69e99$exports, "collectParams", () => $50b2a1fcb8a69e
 $parcel$export($50b2a1fcb8a69e99$exports, "clearParam", () => $50b2a1fcb8a69e99$export$8ec074d96e3cb6b5);
 
 const $50b2a1fcb8a69e99$var$paramsEndpoint = 0x01;
-let $50b2a1fcb8a69e99$export$426dc07f493a4c47;
-(function(ParamType) {
+var $50b2a1fcb8a69e99$export$426dc07f493a4c47 = /*#__PURE__*/ function(ParamType) {
     ParamType[ParamType["raw"] = 0] = "raw";
     ParamType[ParamType["string"] = 1] = "string";
     ParamType[ParamType["bool"] = 2] = "bool";
     ParamType[ParamType["long"] = 3] = "long";
     ParamType[ParamType["double"] = 4] = "double";
     ParamType[ParamType["action"] = 5] = "action";
-})($50b2a1fcb8a69e99$export$426dc07f493a4c47 || ($50b2a1fcb8a69e99$export$426dc07f493a4c47 = {}));
-let $50b2a1fcb8a69e99$export$e64bf06489774cd7;
-(function(ParamMode) {
+    return ParamType;
+}({});
+var $50b2a1fcb8a69e99$export$e64bf06489774cd7 = /*#__PURE__*/ function(ParamMode) {
     ParamMode[ParamMode["volatile"] = 1] = "volatile";
     ParamMode[ParamMode["system"] = 2] = "system";
     ParamMode[ParamMode["application"] = 4] = "application";
     ParamMode[ParamMode["locked"] = 16] = "locked";
-})($50b2a1fcb8a69e99$export$e64bf06489774cd7 || ($50b2a1fcb8a69e99$export$e64bf06489774cd7 = {}));
+    return ParamMode;
+}({});
 function $50b2a1fcb8a69e99$var$validParamType(type) {
-    return type === $50b2a1fcb8a69e99$export$426dc07f493a4c47.raw || type === $50b2a1fcb8a69e99$export$426dc07f493a4c47.string || type === $50b2a1fcb8a69e99$export$426dc07f493a4c47.bool || type === $50b2a1fcb8a69e99$export$426dc07f493a4c47.long || type === $50b2a1fcb8a69e99$export$426dc07f493a4c47.double || type === $50b2a1fcb8a69e99$export$426dc07f493a4c47.action;
+    return type === 0 || type === 1 || type === 2 || type === 3 || type === 4 || type === 5;
 }
 function $50b2a1fcb8a69e99$var$validParamMode(mode) {
-    const mask = $50b2a1fcb8a69e99$export$e64bf06489774cd7.volatile | $50b2a1fcb8a69e99$export$e64bf06489774cd7.system | $50b2a1fcb8a69e99$export$e64bf06489774cd7.application | $50b2a1fcb8a69e99$export$e64bf06489774cd7.locked;
+    const mask = 23;
     return (mode & ~mask) === 0;
 }
 async function $50b2a1fcb8a69e99$export$ecf541e09a511845(s, name, timeout = 5000) {
@@ -1592,8 +1595,8 @@ async function $668c9db91c0d9266$export$26fd734c1398e7f7(s, timeout = 5000) {
     return reply;
 }
 class $668c9db91c0d9266$export$1ff2b8f5c3b1fa7d {
-    ch = null;
     constructor(host, device){
+        this.ch = null;
         // store host and device
         this.host = host;
         this.device = device;
@@ -1669,8 +1672,8 @@ async function $f1b85200f32d8427$export$989790aac965fb4(baudRate = 115200) {
     return new $f1b85200f32d8427$export$61b0d7921fd6a089(port, baudRate);
 }
 class $f1b85200f32d8427$export$61b0d7921fd6a089 {
-    ch = null;
     constructor(port, baudRate){
+        this.ch = null;
         // store port and baud rate
         this.port = port;
         this.baudRate = baudRate;
@@ -1708,7 +1711,7 @@ class $f1b85200f32d8427$export$61b0d7921fd6a089 {
                 let buffer = "";
                 while(true){
                     // read data
-                    const { done: done , value: value  } = await reader.read();
+                    const { done: done, value: value } = await reader.read();
                     if (done) break;
                     // Decode the chunk and add it to the buffer
                     buffer += (0, $fab42eb3dee39b5b$export$f84e8e69fd4488a5)(value);

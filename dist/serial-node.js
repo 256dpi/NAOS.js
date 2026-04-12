@@ -1,13 +1,11 @@
-import {SerialPort as $2MdkL$SerialPort} from "serialport";
-import $2MdkL$serialportparserreadline from "@serialport/parser-readline";
-import {basename as $2MdkL$basename} from "node:path";
+import {SerialPort as $3s9QZ$SerialPort} from "serialport";
+import {ReadlineParser as $3s9QZ$ReadlineParser} from "@serialport/parser-readline";
+import {basename as $3s9QZ$basename} from "node:path";
 
 
 
 
-class $aa3f839fb81c244d$export$c24e73273208a9bb {
-    queue = [];
-    waiters = [];
+class $b647a1b8250e2421$export$c24e73273208a9bb {
     push(item) {
         // add to back
         this.queue.push(item);
@@ -33,27 +31,31 @@ class $aa3f839fb81c244d$export$c24e73273208a9bb {
             }, timeout);
         });
     }
+    constructor(){
+        this.queue = [];
+        this.waiters = [];
+    }
 }
 
 
-const $6b0ddb031a0df909$var$utf8Enc = new TextEncoder();
-const $6b0ddb031a0df909$var$utf8Dec = new TextDecoder();
-function $6b0ddb031a0df909$export$fc336dbfaf62f18f(string) {
-    return $6b0ddb031a0df909$var$utf8Enc.encode(string);
+const $33d79368528a0676$var$utf8Enc = new TextEncoder();
+const $33d79368528a0676$var$utf8Dec = new TextDecoder();
+function $33d79368528a0676$export$fc336dbfaf62f18f(string) {
+    return $33d79368528a0676$var$utf8Enc.encode(string);
 }
-function $6b0ddb031a0df909$export$f84e8e69fd4488a5(buffer) {
-    return $6b0ddb031a0df909$var$utf8Dec.decode(buffer);
+function $33d79368528a0676$export$f84e8e69fd4488a5(buffer) {
+    return $33d79368528a0676$var$utf8Dec.decode(buffer);
 }
-function $6b0ddb031a0df909$export$37cc283d8fbd3462(buffer) {
+function $33d79368528a0676$export$37cc283d8fbd3462(buffer) {
     const bytes = new Uint8Array(buffer);
     let binary = "";
     for(let i = 0; i < bytes.byteLength; i++)binary += String.fromCharCode(bytes[i]);
-    return $6b0ddb031a0df909$export$fc336dbfaf62f18f(btoa(binary));
+    return $33d79368528a0676$export$fc336dbfaf62f18f(btoa(binary));
 }
-function $6b0ddb031a0df909$export$c537b38001c583b7(base64) {
+function $33d79368528a0676$export$c537b38001c583b7(base64) {
     return new Uint8Array(atob(base64).split("").map((c)=>c.charCodeAt(0)));
 }
-function $6b0ddb031a0df909$export$ee1b3e54f0441b22(...parts) {
+function $33d79368528a0676$export$ee1b3e54f0441b22(...parts) {
     let size = 0;
     for (const p of parts)size += p.byteLength;
     const buf = new Uint8Array(size);
@@ -64,7 +66,7 @@ function $6b0ddb031a0df909$export$ee1b3e54f0441b22(...parts) {
     }
     return buf;
 }
-function $6b0ddb031a0df909$export$4385e60b38654f68(length) {
+function $33d79368528a0676$export$4385e60b38654f68(length) {
     const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     let result = "";
     for(let i = 0; i < length; i++){
@@ -73,10 +75,10 @@ function $6b0ddb031a0df909$export$4385e60b38654f68(length) {
     }
     return result;
 }
-function $6b0ddb031a0df909$export$66b0e5ed4f34432a(length) {
+function $33d79368528a0676$export$66b0e5ed4f34432a(length) {
     return crypto.getRandomValues(new Uint8Array(length));
 }
-async function $6b0ddb031a0df909$export$e10eb67e19628714(key, challenge) {
+async function $33d79368528a0676$export$e10eb67e19628714(key, challenge) {
     // import HMAC key
     const cryptoKey = await crypto.subtle.importKey("raw", key, {
         name: "HMAC",
@@ -90,7 +92,7 @@ async function $6b0ddb031a0df909$export$e10eb67e19628714(key, challenge) {
     const res = await crypto.subtle.sign("HMAC", cryptoKey, challenge);
     return new Uint8Array(res);
 }
-function $6b0ddb031a0df909$export$dd4f63edb9ba1490(file) {
+function $33d79368528a0676$export$dd4f63edb9ba1490(file) {
     return new Promise((resolve, reject)=>{
         const r = new FileReader();
         r.onload = ()=>{
@@ -102,12 +104,12 @@ function $6b0ddb031a0df909$export$dd4f63edb9ba1490(file) {
         r.readAsArrayBuffer(file);
     });
 }
-function $6b0ddb031a0df909$export$2a703dbb0cb35339(fmt, ...args) {
+function $33d79368528a0676$export$2a703dbb0cb35339(fmt, ...args) {
     // calculate size
     let size = 0;
     for (const [index, arg] of args.entries())switch(fmt.charAt(index)){
         case "s":
-            size += $6b0ddb031a0df909$export$fc336dbfaf62f18f(arg).byteLength;
+            size += $33d79368528a0676$export$fc336dbfaf62f18f(arg).byteLength;
             break;
         case "b":
             size += arg.length;
@@ -129,13 +131,13 @@ function $6b0ddb031a0df909$export$2a703dbb0cb35339(fmt, ...args) {
     }
     // create buffer and view
     const buffer = new Uint8Array(size);
-    const view = $6b0ddb031a0df909$export$9bcaddb313b2c51f(buffer);
+    const view = $33d79368528a0676$export$9bcaddb313b2c51f(buffer);
     // write arguments
     let offset = 0;
     for (const [index, arg] of args.entries())switch(fmt.charAt(index)){
         case "s":
             {
-                const encoded = $6b0ddb031a0df909$export$fc336dbfaf62f18f(arg);
+                const encoded = $33d79368528a0676$export$fc336dbfaf62f18f(arg);
                 buffer.set(encoded, offset);
                 offset += encoded.byteLength;
                 break;
@@ -165,9 +167,9 @@ function $6b0ddb031a0df909$export$2a703dbb0cb35339(fmt, ...args) {
     }
     return buffer;
 }
-function $6b0ddb031a0df909$export$417857010dc9287f(fmt, buffer) {
+function $33d79368528a0676$export$417857010dc9287f(fmt, buffer) {
     // get view
-    const view = $6b0ddb031a0df909$export$9bcaddb313b2c51f(buffer);
+    const view = $33d79368528a0676$export$9bcaddb313b2c51f(buffer);
     // prepare result
     const result = [];
     // read arguments
@@ -177,7 +179,7 @@ function $6b0ddb031a0df909$export$417857010dc9287f(fmt, buffer) {
             {
                 let end = buffer.indexOf(0, pos);
                 if (end === -1) end = buffer.length;
-                result.push($6b0ddb031a0df909$export$f84e8e69fd4488a5(buffer.slice(pos, end)));
+                result.push($33d79368528a0676$export$f84e8e69fd4488a5(buffer.slice(pos, end)));
                 pos = end + 1;
                 break;
             }
@@ -206,10 +208,10 @@ function $6b0ddb031a0df909$export$417857010dc9287f(fmt, buffer) {
     }
     return result;
 }
-function $6b0ddb031a0df909$export$9bcaddb313b2c51f(buffer) {
+function $33d79368528a0676$export$9bcaddb313b2c51f(buffer) {
     return new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
 }
-function $6b0ddb031a0df909$export$398604a469f7de9a(buf1, buf2) {
+function $33d79368528a0676$export$398604a469f7de9a(buf1, buf2) {
     // check lengths
     if (buf1.byteLength !== buf2.byteLength) return false;
     // compare bytes
@@ -220,9 +222,9 @@ function $6b0ddb031a0df909$export$398604a469f7de9a(buf1, buf2) {
 }
 
 
-class $aa2d5532cb55e3ab$export$3dc07afe418952bc extends (0, $aa3f839fb81c244d$export$c24e73273208a9bb) {
+class $5f5140967f76536e$export$3dc07afe418952bc extends (0, $b647a1b8250e2421$export$c24e73273208a9bb) {
 }
-class $aa2d5532cb55e3ab$export$f69c19e57285b83a {
+class $5f5140967f76536e$export$f69c19e57285b83a {
     constructor(session, endpoint, data){
         this.session = session;
         this.endpoint = endpoint;
@@ -235,12 +237,12 @@ class $aa2d5532cb55e3ab$export$f69c19e57285b83a {
     }
     static parse(data) {
         if (data.length < 4 || data[0] !== 1) return null;
-        const view = (0, $6b0ddb031a0df909$export$9bcaddb313b2c51f)(data);
-        return new $aa2d5532cb55e3ab$export$f69c19e57285b83a(view.getUint16(1, true), data[3], data.length > 4 ? data.slice(4) : null);
+        const view = (0, $33d79368528a0676$export$9bcaddb313b2c51f)(data);
+        return new $5f5140967f76536e$export$f69c19e57285b83a(view.getUint16(1, true), data[3], data.length > 4 ? data.slice(4) : null);
     }
     build() {
         const data = new Uint8Array(4 + this.size());
-        const view = (0, $6b0ddb031a0df909$export$9bcaddb313b2c51f)(data);
+        const view = (0, $33d79368528a0676$export$9bcaddb313b2c51f)(data);
         view.setUint8(0, 1);
         view.setUint16(1, this.session, true);
         view.setUint8(3, this.endpoint);
@@ -248,14 +250,14 @@ class $aa2d5532cb55e3ab$export$f69c19e57285b83a {
         return data;
     }
 }
-class $aa2d5532cb55e3ab$export$cfdacaa37f9b4dd7 {
-    closed = false;
-    doneResolve = null;
-    queues = new Set();
-    opening = new Map();
-    sessions = new Map();
-    closing = new Map();
+class $5f5140967f76536e$export$cfdacaa37f9b4dd7 {
     constructor(tr, device, width, onClose){
+        this.closed = false;
+        this.doneResolve = null;
+        this.queues = new Set();
+        this.opening = new Map();
+        this.sessions = new Map();
+        this.closing = new Map();
         this.tr = tr;
         this.dev = device;
         this.widthValue = width;
@@ -299,12 +301,12 @@ class $aa2d5532cb55e3ab$export$cfdacaa37f9b4dd7 {
             const owner = this.sessions.get(msg.session);
             if (owner && owner !== queue) throw new Error("wrong owner");
         }
-        if (msg.session === 0 && msg.endpoint === 0x0) this.opening.set(msg.data ? (0, $6b0ddb031a0df909$export$f84e8e69fd4488a5)(msg.data) : "", queue);
+        if (msg.session === 0 && msg.endpoint === 0x0) this.opening.set(msg.data ? (0, $33d79368528a0676$export$f84e8e69fd4488a5)(msg.data) : "", queue);
         if (msg.session !== 0 && msg.endpoint === 0xff) this.closing.set(msg.session, queue);
         try {
             await this.tr.write(msg);
         } catch (err) {
-            if (msg.session === 0 && msg.endpoint === 0x0 && this.opening.get(msg.data ? (0, $6b0ddb031a0df909$export$f84e8e69fd4488a5)(msg.data) : "") === queue) this.opening.delete(msg.data ? (0, $6b0ddb031a0df909$export$f84e8e69fd4488a5)(msg.data) : "");
+            if (msg.session === 0 && msg.endpoint === 0x0 && this.opening.get(msg.data ? (0, $33d79368528a0676$export$f84e8e69fd4488a5)(msg.data) : "") === queue) this.opening.delete(msg.data ? (0, $33d79368528a0676$export$f84e8e69fd4488a5)(msg.data) : "");
             if (msg.session !== 0 && msg.endpoint === 0xff && this.closing.get(msg.session) === queue) this.closing.delete(msg.session);
             await this.close();
             throw err;
@@ -322,9 +324,9 @@ class $aa2d5532cb55e3ab$export$cfdacaa37f9b4dd7 {
     }
     route(msg) {
         if (msg.endpoint === 0x0) {
-            const owner = this.opening.get(msg.data ? (0, $6b0ddb031a0df909$export$f84e8e69fd4488a5)(msg.data) : "");
+            const owner = this.opening.get(msg.data ? (0, $33d79368528a0676$export$f84e8e69fd4488a5)(msg.data) : "");
             if (owner && this.queues.has(owner)) {
-                this.opening.delete(msg.data ? (0, $6b0ddb031a0df909$export$f84e8e69fd4488a5)(msg.data) : "");
+                this.opening.delete(msg.data ? (0, $33d79368528a0676$export$f84e8e69fd4488a5)(msg.data) : "");
                 this.sessions.set(msg.session, owner);
                 return [
                     owner
@@ -349,7 +351,7 @@ class $aa2d5532cb55e3ab$export$cfdacaa37f9b4dd7 {
         return Array.from(this.queues);
     }
 }
-async function $aa2d5532cb55e3ab$export$aafa59e2e03f2942(queue, timeout) {
+async function $5f5140967f76536e$export$aafa59e2e03f2942(queue, timeout) {
     const msg = await queue.pop(timeout);
     if (!msg) throw new Error("timeout");
     return msg;
@@ -357,41 +359,41 @@ async function $aa2d5532cb55e3ab$export$aafa59e2e03f2942(queue, timeout) {
 
 
 
-const $b88665a077501510$var$knownPrefixes = [
+const $1d60f223bb9f0f59$var$knownPrefixes = [
     "tty.SLAB",
     "tty.usbserial",
     "tty.usbmodem",
     "ttyUSB"
 ];
-async function $b88665a077501510$export$9771b2cde0fbddb8() {
-    const ports = await (0, $2MdkL$SerialPort).list();
+async function $1d60f223bb9f0f59$export$9771b2cde0fbddb8() {
+    const ports = await (0, $3s9QZ$SerialPort).list();
     // get paths, sort reverse to list combined ports with serial port first
     const paths = ports.map((p)=>p.path).sort().reverse();
     // filter to known prefixes
-    return paths.filter((path)=>$b88665a077501510$var$knownPrefixes.some((prefix)=>path.includes(prefix)));
+    return paths.filter((path)=>$1d60f223bb9f0f59$var$knownPrefixes.some((prefix)=>path.includes(prefix)));
 }
-class $b88665a077501510$export$875c5c6cbf01e2d8 {
-    port = null;
-    ch = null;
+class $1d60f223bb9f0f59$export$875c5c6cbf01e2d8 {
     constructor(path, baudRate = 115200){
+        this.port = null;
+        this.ch = null;
         this.path = path;
         this.baudRate = baudRate;
     }
     id() {
-        return `serial/${this.path}`;
+        return `serial/${$3s9QZ$basename(this.path)}`;
     }
     type() {
         return "Serial";
     }
     name() {
-        return $2MdkL$basename(this.path);
+        return $3s9QZ$basename(this.path);
     }
     async open() {
         // check channel
         if (this.ch) throw new Error("channel already open");
         // open port
         this.port = await new Promise((resolve, reject)=>{
-            const port = new (0, $2MdkL$SerialPort)({
+            const port = new (0, $3s9QZ$SerialPort)({
                 path: this.path,
                 baudRate: this.baudRate
             }, (err)=>{
@@ -403,7 +405,7 @@ class $b88665a077501510$export$875c5c6cbf01e2d8 {
         let closed = false;
         // capture port ref for channel
         const port = this.port;
-        const parser = this.port.pipe(new (0, $2MdkL$serialportparserreadline)({
+        const parser = this.port.pipe(new (0, $3s9QZ$ReadlineParser)({
             delimiter: "\n"
         }));
         let onLine = null;
@@ -413,7 +415,7 @@ class $b88665a077501510$export$875c5c6cbf01e2d8 {
                 onLine = (line)=>{
                     if (line.startsWith("NAOS!")) {
                         const data = line.slice(5);
-                        const msg = (0, $aa2d5532cb55e3ab$export$f69c19e57285b83a).parse(Uint8Array.from(atob(data), (c)=>c.charCodeAt(0)));
+                        const msg = (0, $5f5140967f76536e$export$f69c19e57285b83a).parse(Uint8Array.from(atob(data), (c)=>c.charCodeAt(0)));
                         if (msg) onData(msg);
                     }
                 };
@@ -425,7 +427,7 @@ class $b88665a077501510$export$875c5c6cbf01e2d8 {
                 port.on("close", onPortClose);
             },
             write: async (msg)=>{
-                const frame = (0, $6b0ddb031a0df909$export$ee1b3e54f0441b22)((0, $6b0ddb031a0df909$export$fc336dbfaf62f18f)("\nNAOS!"), (0, $6b0ddb031a0df909$export$37cc283d8fbd3462)(msg.build()), (0, $6b0ddb031a0df909$export$fc336dbfaf62f18f)("\n"));
+                const frame = (0, $33d79368528a0676$export$ee1b3e54f0441b22)((0, $33d79368528a0676$export$fc336dbfaf62f18f)("\nNAOS!"), (0, $33d79368528a0676$export$37cc283d8fbd3462)(msg.build()), (0, $33d79368528a0676$export$fc336dbfaf62f18f)("\n"));
                 await new Promise((resolve, reject)=>{
                     port.write(frame, (err)=>{
                         if (err) reject(err);
@@ -445,7 +447,7 @@ class $b88665a077501510$export$875c5c6cbf01e2d8 {
                 });
             }
         };
-        this.ch = new (0, $aa2d5532cb55e3ab$export$cfdacaa37f9b4dd7)(transport, this, 1, ()=>{
+        this.ch = new (0, $5f5140967f76536e$export$cfdacaa37f9b4dd7)(transport, this, 1, ()=>{
             this.ch = null;
         });
         return this.ch;
@@ -453,5 +455,5 @@ class $b88665a077501510$export$875c5c6cbf01e2d8 {
 }
 
 
-export {$b88665a077501510$export$9771b2cde0fbddb8 as serialList, $b88665a077501510$export$875c5c6cbf01e2d8 as NodeSerialDevice};
+export {$1d60f223bb9f0f59$export$9771b2cde0fbddb8 as serialList, $1d60f223bb9f0f59$export$875c5c6cbf01e2d8 as NodeSerialDevice};
 //# sourceMappingURL=serial-node.js.map
