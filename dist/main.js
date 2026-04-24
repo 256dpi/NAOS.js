@@ -1771,6 +1771,49 @@ class $f1b85200f32d8427$export$61b0d7921fd6a089 {
 
 
 
+var $8c9db5ad3a7218fd$exports = {};
+
+$parcel$export($8c9db5ad3a7218fd$exports, "getTime", () => $8c9db5ad3a7218fd$export$1428f42a7de81803);
+$parcel$export($8c9db5ad3a7218fd$exports, "setTime", () => $8c9db5ad3a7218fd$export$e5d5e1c1822b6e56);
+$parcel$export($8c9db5ad3a7218fd$exports, "getTimeInfo", () => $8c9db5ad3a7218fd$export$5c5047d260d2b2e4);
+
+const $8c9db5ad3a7218fd$var$timeEndpoint = 0x09;
+async function $8c9db5ad3a7218fd$export$1428f42a7de81803(s, timeout = 5000) {
+    // send command
+    const cmd = (0, $fab42eb3dee39b5b$export$2a703dbb0cb35339)("o", 0);
+    await s.send($8c9db5ad3a7218fd$var$timeEndpoint, cmd, 0);
+    // receive reply
+    const [reply] = await s.receive($8c9db5ad3a7218fd$var$timeEndpoint, false, timeout);
+    // verify reply
+    if (reply.length !== 8) throw new Error("invalid reply");
+    // parse epoch milliseconds
+    const view = (0, $fab42eb3dee39b5b$export$9bcaddb313b2c51f)(reply);
+    const ms = view.getBigInt64(0, true);
+    return new Date(Number(ms));
+}
+async function $8c9db5ad3a7218fd$export$e5d5e1c1822b6e56(s, date, timeout = 5000) {
+    // build command
+    const cmd = new Uint8Array(9);
+    cmd[0] = 1;
+    const view = (0, $fab42eb3dee39b5b$export$9bcaddb313b2c51f)(cmd);
+    view.setBigInt64(1, BigInt(date.getTime()), true);
+    // send command
+    await s.send($8c9db5ad3a7218fd$var$timeEndpoint, cmd, timeout);
+}
+async function $8c9db5ad3a7218fd$export$5c5047d260d2b2e4(s, timeout = 5000) {
+    // send command
+    const cmd = (0, $fab42eb3dee39b5b$export$2a703dbb0cb35339)("o", 2);
+    await s.send($8c9db5ad3a7218fd$var$timeEndpoint, cmd, 0);
+    // receive reply
+    const [reply] = await s.receive($8c9db5ad3a7218fd$var$timeEndpoint, false, timeout);
+    // verify reply
+    if (reply.length !== 4) throw new Error("invalid reply");
+    // parse offset in seconds (signed)
+    const view = (0, $fab42eb3dee39b5b$export$9bcaddb313b2c51f)(reply);
+    return view.getInt32(0, true);
+}
+
+
 var $e1163a73e33a3ccf$exports = {};
 
 $parcel$export($e1163a73e33a3ccf$exports, "update", () => $e1163a73e33a3ccf$export$722fbec263ad908a);
@@ -1814,5 +1857,5 @@ async function $e1163a73e33a3ccf$export$722fbec263ad908a(session, data, report, 
 
 
 
-export {$aa9ad2c21d2bf2d7$export$3ed79f77b3338468 as authStatus, $aa9ad2c21d2bf2d7$export$92cac5b0a55d7f50 as authProvision, $aa9ad2c21d2bf2d7$export$4d11934c049ffae2 as authDescribe, $aa9ad2c21d2bf2d7$export$db2de38840edd6a5 as authAttest, $9224a2c5eeae1672$export$b699ee72de2ebcbd as bleRequest, $9224a2c5eeae1672$export$926ab273976713de as BLEDevice, $e7d69bb808fab13a$export$ccbf702e39e5c28d as checkCoredump, $e7d69bb808fab13a$export$197b71d4e34c9ea3 as readCoredump, $e7d69bb808fab13a$export$56b3ad8bf7c85b76 as deleteCoredump, $e7d69bb808fab13a$export$29c260b0529fb76 as streamLog, $99f74415292121e0$export$3dc07afe418952bc as Queue, $99f74415292121e0$export$f69c19e57285b83a as Message, $99f74415292121e0$export$cfdacaa37f9b4dd7 as Channel, $99f74415292121e0$export$aafa59e2e03f2942 as read, $189005054305d286$export$3cc322771f0aca5b as statPath, $189005054305d286$export$d00618d8d97ebf68 as listDir, $189005054305d286$export$72c04af63de9061a as readFile, $189005054305d286$export$ec88705ee4409f46 as readFileRange, $189005054305d286$export$552bfb764b5cd2b4 as writeFile, $189005054305d286$export$e355e6d7686ffc32 as renamePath, $189005054305d286$export$5c4e774b0e27d36b as removePath, $189005054305d286$export$3b8a92549237260e as sha256File, $189005054305d286$export$aa9bab72412f5613 as makePath, $d41f8f42b7b1f821$export$a947a71ad4d6575 as HTTPDevice, $eb2d9580c7f35431$export$86abcda9a311d473 as ManagedDevice, $8d0624ae1e205836$export$70d6e7a2b8980af6 as MetricKind, $8d0624ae1e205836$export$777f07137a9ea427 as MetricType, $8d0624ae1e205836$export$fdc72cc32fab8771 as listMetrics, $8d0624ae1e205836$export$73d94888757c6215 as describeMetric, $8d0624ae1e205836$export$eeadd579e8255396 as readMetrics, $8d0624ae1e205836$export$f256fc0d3bd6d2ee as readLongMetrics, $8d0624ae1e205836$export$8b987d10383d7b6c as readFloatMetrics, $8d0624ae1e205836$export$c30d31b1766da0ac as readDoubleMetrics, $50b2a1fcb8a69e99$export$426dc07f493a4c47 as ParamType, $50b2a1fcb8a69e99$export$e64bf06489774cd7 as ParamMode, $50b2a1fcb8a69e99$export$ecf541e09a511845 as getParam, $50b2a1fcb8a69e99$export$260ce70ca30cd65 as setParam, $50b2a1fcb8a69e99$export$2428fb4221ce57da as listParams, $50b2a1fcb8a69e99$export$a44436b1b8efd60b as readParam, $50b2a1fcb8a69e99$export$eb49a0586a768c1b as writeParam, $50b2a1fcb8a69e99$export$bf720df32fb7816d as collectParams, $50b2a1fcb8a69e99$export$8ec074d96e3cb6b5 as clearParam, $89603ac6c30e3b84$export$c24e73273208a9bb as AsyncQueue, $668c9db91c0d9266$export$24d523b42850480e as relayCollect, $668c9db91c0d9266$export$6873a5dba9ec288a as relayLink, $668c9db91c0d9266$export$b56a09beaeb45da4 as relaySend, $668c9db91c0d9266$export$26fd734c1398e7f7 as relayReceive, $668c9db91c0d9266$export$1ff2b8f5c3b1fa7d as RelayDevice, $f1b85200f32d8427$export$989790aac965fb4 as serialRequest, $f1b85200f32d8427$export$61b0d7921fd6a089 as SerialDevice, $5f0bc7af558cc661$export$96e9906d6d93a972 as Status, $5f0bc7af558cc661$export$1fb4852a55678982 as Session, $e1163a73e33a3ccf$export$722fbec263ad908a as update, $fab42eb3dee39b5b$export$fc336dbfaf62f18f as toBuffer, $fab42eb3dee39b5b$export$f84e8e69fd4488a5 as toString, $fab42eb3dee39b5b$export$37cc283d8fbd3462 as toBase64, $fab42eb3dee39b5b$export$c537b38001c583b7 as fromBase64, $fab42eb3dee39b5b$export$ee1b3e54f0441b22 as concat, $fab42eb3dee39b5b$export$4385e60b38654f68 as random, $fab42eb3dee39b5b$export$66b0e5ed4f34432a as secureRandom, $fab42eb3dee39b5b$export$e10eb67e19628714 as hmac256, $fab42eb3dee39b5b$export$dd4f63edb9ba1490 as requestFile, $fab42eb3dee39b5b$export$2a703dbb0cb35339 as pack, $fab42eb3dee39b5b$export$9bcaddb313b2c51f as toView, $fab42eb3dee39b5b$export$417857010dc9287f as unpack, $fab42eb3dee39b5b$export$398604a469f7de9a as compare};
+export {$aa9ad2c21d2bf2d7$export$3ed79f77b3338468 as authStatus, $aa9ad2c21d2bf2d7$export$92cac5b0a55d7f50 as authProvision, $aa9ad2c21d2bf2d7$export$4d11934c049ffae2 as authDescribe, $aa9ad2c21d2bf2d7$export$db2de38840edd6a5 as authAttest, $9224a2c5eeae1672$export$b699ee72de2ebcbd as bleRequest, $9224a2c5eeae1672$export$926ab273976713de as BLEDevice, $e7d69bb808fab13a$export$ccbf702e39e5c28d as checkCoredump, $e7d69bb808fab13a$export$197b71d4e34c9ea3 as readCoredump, $e7d69bb808fab13a$export$56b3ad8bf7c85b76 as deleteCoredump, $e7d69bb808fab13a$export$29c260b0529fb76 as streamLog, $99f74415292121e0$export$3dc07afe418952bc as Queue, $99f74415292121e0$export$f69c19e57285b83a as Message, $99f74415292121e0$export$cfdacaa37f9b4dd7 as Channel, $99f74415292121e0$export$aafa59e2e03f2942 as read, $189005054305d286$export$3cc322771f0aca5b as statPath, $189005054305d286$export$d00618d8d97ebf68 as listDir, $189005054305d286$export$72c04af63de9061a as readFile, $189005054305d286$export$ec88705ee4409f46 as readFileRange, $189005054305d286$export$552bfb764b5cd2b4 as writeFile, $189005054305d286$export$e355e6d7686ffc32 as renamePath, $189005054305d286$export$5c4e774b0e27d36b as removePath, $189005054305d286$export$3b8a92549237260e as sha256File, $189005054305d286$export$aa9bab72412f5613 as makePath, $d41f8f42b7b1f821$export$a947a71ad4d6575 as HTTPDevice, $eb2d9580c7f35431$export$86abcda9a311d473 as ManagedDevice, $8d0624ae1e205836$export$70d6e7a2b8980af6 as MetricKind, $8d0624ae1e205836$export$777f07137a9ea427 as MetricType, $8d0624ae1e205836$export$fdc72cc32fab8771 as listMetrics, $8d0624ae1e205836$export$73d94888757c6215 as describeMetric, $8d0624ae1e205836$export$eeadd579e8255396 as readMetrics, $8d0624ae1e205836$export$f256fc0d3bd6d2ee as readLongMetrics, $8d0624ae1e205836$export$8b987d10383d7b6c as readFloatMetrics, $8d0624ae1e205836$export$c30d31b1766da0ac as readDoubleMetrics, $50b2a1fcb8a69e99$export$426dc07f493a4c47 as ParamType, $50b2a1fcb8a69e99$export$e64bf06489774cd7 as ParamMode, $50b2a1fcb8a69e99$export$ecf541e09a511845 as getParam, $50b2a1fcb8a69e99$export$260ce70ca30cd65 as setParam, $50b2a1fcb8a69e99$export$2428fb4221ce57da as listParams, $50b2a1fcb8a69e99$export$a44436b1b8efd60b as readParam, $50b2a1fcb8a69e99$export$eb49a0586a768c1b as writeParam, $50b2a1fcb8a69e99$export$bf720df32fb7816d as collectParams, $50b2a1fcb8a69e99$export$8ec074d96e3cb6b5 as clearParam, $89603ac6c30e3b84$export$c24e73273208a9bb as AsyncQueue, $668c9db91c0d9266$export$24d523b42850480e as relayCollect, $668c9db91c0d9266$export$6873a5dba9ec288a as relayLink, $668c9db91c0d9266$export$b56a09beaeb45da4 as relaySend, $668c9db91c0d9266$export$26fd734c1398e7f7 as relayReceive, $668c9db91c0d9266$export$1ff2b8f5c3b1fa7d as RelayDevice, $f1b85200f32d8427$export$989790aac965fb4 as serialRequest, $f1b85200f32d8427$export$61b0d7921fd6a089 as SerialDevice, $5f0bc7af558cc661$export$96e9906d6d93a972 as Status, $5f0bc7af558cc661$export$1fb4852a55678982 as Session, $8c9db5ad3a7218fd$export$1428f42a7de81803 as getTime, $8c9db5ad3a7218fd$export$e5d5e1c1822b6e56 as setTime, $8c9db5ad3a7218fd$export$5c5047d260d2b2e4 as getTimeInfo, $e1163a73e33a3ccf$export$722fbec263ad908a as update, $fab42eb3dee39b5b$export$fc336dbfaf62f18f as toBuffer, $fab42eb3dee39b5b$export$f84e8e69fd4488a5 as toString, $fab42eb3dee39b5b$export$37cc283d8fbd3462 as toBase64, $fab42eb3dee39b5b$export$c537b38001c583b7 as fromBase64, $fab42eb3dee39b5b$export$ee1b3e54f0441b22 as concat, $fab42eb3dee39b5b$export$4385e60b38654f68 as random, $fab42eb3dee39b5b$export$66b0e5ed4f34432a as secureRandom, $fab42eb3dee39b5b$export$e10eb67e19628714 as hmac256, $fab42eb3dee39b5b$export$dd4f63edb9ba1490 as requestFile, $fab42eb3dee39b5b$export$2a703dbb0cb35339 as pack, $fab42eb3dee39b5b$export$9bcaddb313b2c51f as toView, $fab42eb3dee39b5b$export$417857010dc9287f as unpack, $fab42eb3dee39b5b$export$398604a469f7de9a as compare};
 //# sourceMappingURL=main.js.map
