@@ -836,10 +836,14 @@ class $d41f8f42b7b1f821$export$a947a71ad4d6575 {
         if (this.ch) throw new Error("channel already open");
         // create socket
         const socket = new WebSocket("ws://" + this.address, "naos");
-        // await connections
+        // await connection
         await new Promise((resolve, reject)=>{
-            socket.onopen = resolve;
-            socket.onerror = reject;
+            socket.onopen = ()=>resolve();
+            socket.onerror = ()=>{
+                // close the half-open socket before failing, otherwise it lingers
+                socket.close();
+                reject(new Error("failed to open socket"));
+            };
         });
         const transport = {
             start: (onData, onClose)=>{
