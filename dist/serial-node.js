@@ -1,11 +1,11 @@
-import {SerialPort as $3jdmh$SerialPort} from "serialport";
-import {ReadlineParser as $3jdmh$ReadlineParser} from "@serialport/parser-readline";
-import {basename as $3jdmh$basename} from "node:path";
+import {SerialPort as $iYvii$SerialPort} from "serialport";
+import {ReadlineParser as $iYvii$ReadlineParser} from "@serialport/parser-readline";
+import {basename as $iYvii$basename} from "node:path";
 
 
 
 
-class $0da783fbf90b30ce$export$c24e73273208a9bb {
+class $5768fd2b981c3e12$export$c24e73273208a9bb {
     push(item) {
         // add to back
         this.queue.push(item);
@@ -38,24 +38,24 @@ class $0da783fbf90b30ce$export$c24e73273208a9bb {
 }
 
 
-const $e067bf8464469c40$var$utf8Enc = new TextEncoder();
-const $e067bf8464469c40$var$utf8Dec = new TextDecoder();
-function $e067bf8464469c40$export$fc336dbfaf62f18f(string) {
-    return $e067bf8464469c40$var$utf8Enc.encode(string);
+const $2ca61125e20d0719$var$utf8Enc = new TextEncoder();
+const $2ca61125e20d0719$var$utf8Dec = new TextDecoder();
+function $2ca61125e20d0719$export$fc336dbfaf62f18f(string) {
+    return $2ca61125e20d0719$var$utf8Enc.encode(string);
 }
-function $e067bf8464469c40$export$f84e8e69fd4488a5(buffer) {
-    return $e067bf8464469c40$var$utf8Dec.decode(buffer);
+function $2ca61125e20d0719$export$f84e8e69fd4488a5(buffer) {
+    return $2ca61125e20d0719$var$utf8Dec.decode(buffer);
 }
-function $e067bf8464469c40$export$37cc283d8fbd3462(buffer) {
+function $2ca61125e20d0719$export$37cc283d8fbd3462(buffer) {
     const bytes = new Uint8Array(buffer);
     let binary = "";
     for(let i = 0; i < bytes.byteLength; i++)binary += String.fromCharCode(bytes[i]);
-    return $e067bf8464469c40$export$fc336dbfaf62f18f(btoa(binary));
+    return $2ca61125e20d0719$export$fc336dbfaf62f18f(btoa(binary));
 }
-function $e067bf8464469c40$export$c537b38001c583b7(base64) {
+function $2ca61125e20d0719$export$c537b38001c583b7(base64) {
     return new Uint8Array(atob(base64).split("").map((c)=>c.charCodeAt(0)));
 }
-function $e067bf8464469c40$export$ee1b3e54f0441b22(...parts) {
+function $2ca61125e20d0719$export$ee1b3e54f0441b22(...parts) {
     let size = 0;
     for (const p of parts)size += p.byteLength;
     const buf = new Uint8Array(size);
@@ -66,7 +66,7 @@ function $e067bf8464469c40$export$ee1b3e54f0441b22(...parts) {
     }
     return buf;
 }
-function $e067bf8464469c40$export$4385e60b38654f68(length) {
+function $2ca61125e20d0719$export$4385e60b38654f68(length) {
     const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     let result = "";
     for(let i = 0; i < length; i++){
@@ -75,10 +75,10 @@ function $e067bf8464469c40$export$4385e60b38654f68(length) {
     }
     return result;
 }
-function $e067bf8464469c40$export$66b0e5ed4f34432a(length) {
+function $2ca61125e20d0719$export$66b0e5ed4f34432a(length) {
     return crypto.getRandomValues(new Uint8Array(length));
 }
-async function $e067bf8464469c40$export$e10eb67e19628714(key, challenge) {
+async function $2ca61125e20d0719$export$e10eb67e19628714(key, challenge) {
     // import HMAC key
     const cryptoKey = await crypto.subtle.importKey("raw", key, {
         name: "HMAC",
@@ -92,7 +92,7 @@ async function $e067bf8464469c40$export$e10eb67e19628714(key, challenge) {
     const res = await crypto.subtle.sign("HMAC", cryptoKey, challenge);
     return new Uint8Array(res);
 }
-function $e067bf8464469c40$export$dd4f63edb9ba1490(file) {
+function $2ca61125e20d0719$export$dd4f63edb9ba1490(file) {
     return new Promise((resolve, reject)=>{
         const r = new FileReader();
         r.onload = ()=>{
@@ -104,12 +104,12 @@ function $e067bf8464469c40$export$dd4f63edb9ba1490(file) {
         r.readAsArrayBuffer(file);
     });
 }
-function $e067bf8464469c40$export$2a703dbb0cb35339(fmt, ...args) {
+function $2ca61125e20d0719$export$2a703dbb0cb35339(fmt, ...args) {
     // calculate size
     let size = 0;
     for (const [index, arg] of args.entries())switch(fmt.charAt(index)){
         case "s":
-            size += $e067bf8464469c40$export$fc336dbfaf62f18f(arg).byteLength;
+            size += $2ca61125e20d0719$export$fc336dbfaf62f18f(arg).byteLength;
             break;
         case "b":
             size += arg.length;
@@ -131,13 +131,13 @@ function $e067bf8464469c40$export$2a703dbb0cb35339(fmt, ...args) {
     }
     // create buffer and view
     const buffer = new Uint8Array(size);
-    const view = $e067bf8464469c40$export$9bcaddb313b2c51f(buffer);
+    const view = $2ca61125e20d0719$export$9bcaddb313b2c51f(buffer);
     // write arguments
     let offset = 0;
     for (const [index, arg] of args.entries())switch(fmt.charAt(index)){
         case "s":
             {
-                const encoded = $e067bf8464469c40$export$fc336dbfaf62f18f(arg);
+                const encoded = $2ca61125e20d0719$export$fc336dbfaf62f18f(arg);
                 buffer.set(encoded, offset);
                 offset += encoded.byteLength;
                 break;
@@ -167,9 +167,9 @@ function $e067bf8464469c40$export$2a703dbb0cb35339(fmt, ...args) {
     }
     return buffer;
 }
-function $e067bf8464469c40$export$417857010dc9287f(fmt, buffer) {
+function $2ca61125e20d0719$export$417857010dc9287f(fmt, buffer) {
     // get view
-    const view = $e067bf8464469c40$export$9bcaddb313b2c51f(buffer);
+    const view = $2ca61125e20d0719$export$9bcaddb313b2c51f(buffer);
     // prepare result
     const result = [];
     // read arguments
@@ -179,7 +179,7 @@ function $e067bf8464469c40$export$417857010dc9287f(fmt, buffer) {
             {
                 let end = buffer.indexOf(0, pos);
                 if (end === -1) end = buffer.length;
-                result.push($e067bf8464469c40$export$f84e8e69fd4488a5(buffer.slice(pos, end)));
+                result.push($2ca61125e20d0719$export$f84e8e69fd4488a5(buffer.slice(pos, end)));
                 pos = end + 1;
                 break;
             }
@@ -208,10 +208,10 @@ function $e067bf8464469c40$export$417857010dc9287f(fmt, buffer) {
     }
     return result;
 }
-function $e067bf8464469c40$export$9bcaddb313b2c51f(buffer) {
+function $2ca61125e20d0719$export$9bcaddb313b2c51f(buffer) {
     return new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
 }
-function $e067bf8464469c40$export$398604a469f7de9a(buf1, buf2) {
+function $2ca61125e20d0719$export$398604a469f7de9a(buf1, buf2) {
     // check lengths
     if (buf1.byteLength !== buf2.byteLength) return false;
     // compare bytes
@@ -222,9 +222,9 @@ function $e067bf8464469c40$export$398604a469f7de9a(buf1, buf2) {
 }
 
 
-class $62601aee01789b1f$export$3dc07afe418952bc extends (0, $0da783fbf90b30ce$export$c24e73273208a9bb) {
+class $9a7b3fff498b06de$export$3dc07afe418952bc extends (0, $5768fd2b981c3e12$export$c24e73273208a9bb) {
 }
-class $62601aee01789b1f$export$f69c19e57285b83a {
+class $9a7b3fff498b06de$export$f69c19e57285b83a {
     constructor(session, endpoint, data){
         this.session = session;
         this.endpoint = endpoint;
@@ -237,12 +237,12 @@ class $62601aee01789b1f$export$f69c19e57285b83a {
     }
     static parse(data) {
         if (data.length < 4 || data[0] !== 1) return null;
-        const view = (0, $e067bf8464469c40$export$9bcaddb313b2c51f)(data);
-        return new $62601aee01789b1f$export$f69c19e57285b83a(view.getUint16(1, true), data[3], data.length > 4 ? data.slice(4) : null);
+        const view = (0, $2ca61125e20d0719$export$9bcaddb313b2c51f)(data);
+        return new $9a7b3fff498b06de$export$f69c19e57285b83a(view.getUint16(1, true), data[3], data.length > 4 ? data.slice(4) : null);
     }
     build() {
         const data = new Uint8Array(4 + this.size());
-        const view = (0, $e067bf8464469c40$export$9bcaddb313b2c51f)(data);
+        const view = (0, $2ca61125e20d0719$export$9bcaddb313b2c51f)(data);
         view.setUint8(0, 1);
         view.setUint16(1, this.session, true);
         view.setUint8(3, this.endpoint);
@@ -250,7 +250,7 @@ class $62601aee01789b1f$export$f69c19e57285b83a {
         return data;
     }
 }
-class $62601aee01789b1f$export$cfdacaa37f9b4dd7 {
+class $9a7b3fff498b06de$export$cfdacaa37f9b4dd7 {
     constructor(tr, device, width, onClose){
         this.closed = false;
         this.doneResolve = null;
@@ -301,12 +301,12 @@ class $62601aee01789b1f$export$cfdacaa37f9b4dd7 {
             const owner = this.sessions.get(msg.session);
             if (owner && owner !== queue) throw new Error("wrong owner");
         }
-        if (msg.session === 0 && msg.endpoint === 0x0) this.opening.set(msg.data ? (0, $e067bf8464469c40$export$f84e8e69fd4488a5)(msg.data) : "", queue);
+        if (msg.session === 0 && msg.endpoint === 0x0) this.opening.set(msg.data ? (0, $2ca61125e20d0719$export$f84e8e69fd4488a5)(msg.data) : "", queue);
         if (msg.session !== 0 && msg.endpoint === 0xff) this.closing.set(msg.session, queue);
         try {
             await this.tr.write(msg);
         } catch (err) {
-            if (msg.session === 0 && msg.endpoint === 0x0 && this.opening.get(msg.data ? (0, $e067bf8464469c40$export$f84e8e69fd4488a5)(msg.data) : "") === queue) this.opening.delete(msg.data ? (0, $e067bf8464469c40$export$f84e8e69fd4488a5)(msg.data) : "");
+            if (msg.session === 0 && msg.endpoint === 0x0 && this.opening.get(msg.data ? (0, $2ca61125e20d0719$export$f84e8e69fd4488a5)(msg.data) : "") === queue) this.opening.delete(msg.data ? (0, $2ca61125e20d0719$export$f84e8e69fd4488a5)(msg.data) : "");
             if (msg.session !== 0 && msg.endpoint === 0xff && this.closing.get(msg.session) === queue) this.closing.delete(msg.session);
             await this.close();
             throw err;
@@ -324,9 +324,9 @@ class $62601aee01789b1f$export$cfdacaa37f9b4dd7 {
     }
     route(msg) {
         if (msg.endpoint === 0x0) {
-            const owner = this.opening.get(msg.data ? (0, $e067bf8464469c40$export$f84e8e69fd4488a5)(msg.data) : "");
+            const owner = this.opening.get(msg.data ? (0, $2ca61125e20d0719$export$f84e8e69fd4488a5)(msg.data) : "");
             if (owner && this.queues.has(owner)) {
-                this.opening.delete(msg.data ? (0, $e067bf8464469c40$export$f84e8e69fd4488a5)(msg.data) : "");
+                this.opening.delete(msg.data ? (0, $2ca61125e20d0719$export$f84e8e69fd4488a5)(msg.data) : "");
                 this.sessions.set(msg.session, owner);
                 return [
                     owner
@@ -351,7 +351,7 @@ class $62601aee01789b1f$export$cfdacaa37f9b4dd7 {
         return Array.from(this.queues);
     }
 }
-async function $62601aee01789b1f$export$aafa59e2e03f2942(queue, timeout) {
+async function $9a7b3fff498b06de$export$aafa59e2e03f2942(queue, timeout) {
     const msg = await queue.pop(timeout);
     if (!msg) throw new Error("timeout");
     return msg;
@@ -359,20 +359,20 @@ async function $62601aee01789b1f$export$aafa59e2e03f2942(queue, timeout) {
 
 
 
-const $f66c96516db2d95d$var$knownPrefixes = [
+const $5f28838d576d079d$var$knownPrefixes = [
     "tty.SLAB",
     "tty.usbserial",
     "tty.usbmodem",
     "ttyUSB"
 ];
-async function $f66c96516db2d95d$export$9771b2cde0fbddb8() {
-    const ports = await (0, $3jdmh$SerialPort).list();
+async function $5f28838d576d079d$export$9771b2cde0fbddb8() {
+    const ports = await (0, $iYvii$SerialPort).list();
     // get paths, sort reverse to list combined ports with serial port first
     const paths = ports.map((p)=>p.path).sort().reverse();
     // filter to known prefixes
-    return paths.filter((path)=>$f66c96516db2d95d$var$knownPrefixes.some((prefix)=>path.includes(prefix)));
+    return paths.filter((path)=>$5f28838d576d079d$var$knownPrefixes.some((prefix)=>path.includes(prefix)));
 }
-class $f66c96516db2d95d$export$875c5c6cbf01e2d8 {
+class $5f28838d576d079d$export$875c5c6cbf01e2d8 {
     constructor(path, baudRate = 115200){
         this.port = null;
         this.ch = null;
@@ -380,20 +380,20 @@ class $f66c96516db2d95d$export$875c5c6cbf01e2d8 {
         this.baudRate = baudRate;
     }
     id() {
-        return `serial/${$3jdmh$basename(this.path)}`;
+        return `serial/${$iYvii$basename(this.path)}`;
     }
     type() {
         return "Serial";
     }
     name() {
-        return $3jdmh$basename(this.path);
+        return $iYvii$basename(this.path);
     }
     async open() {
         // check channel
         if (this.ch) throw new Error("channel already open");
         // open port
         this.port = await new Promise((resolve, reject)=>{
-            const port = new (0, $3jdmh$SerialPort)({
+            const port = new (0, $iYvii$SerialPort)({
                 path: this.path,
                 baudRate: this.baudRate
             }, (err)=>{
@@ -405,7 +405,7 @@ class $f66c96516db2d95d$export$875c5c6cbf01e2d8 {
         let closed = false;
         // capture port ref for channel
         const port = this.port;
-        const parser = this.port.pipe(new (0, $3jdmh$ReadlineParser)({
+        const parser = this.port.pipe(new (0, $iYvii$ReadlineParser)({
             delimiter: "\n"
         }));
         let onLine = null;
@@ -415,7 +415,7 @@ class $f66c96516db2d95d$export$875c5c6cbf01e2d8 {
                 onLine = (line)=>{
                     if (line.startsWith("NAOS!")) {
                         const data = line.slice(5);
-                        const msg = (0, $62601aee01789b1f$export$f69c19e57285b83a).parse(Uint8Array.from(atob(data), (c)=>c.charCodeAt(0)));
+                        const msg = (0, $9a7b3fff498b06de$export$f69c19e57285b83a).parse(Uint8Array.from(atob(data), (c)=>c.charCodeAt(0)));
                         if (msg) onData(msg);
                     }
                 };
@@ -427,7 +427,7 @@ class $f66c96516db2d95d$export$875c5c6cbf01e2d8 {
                 port.on("close", onPortClose);
             },
             write: async (msg)=>{
-                const frame = (0, $e067bf8464469c40$export$ee1b3e54f0441b22)((0, $e067bf8464469c40$export$fc336dbfaf62f18f)("\nNAOS!"), (0, $e067bf8464469c40$export$37cc283d8fbd3462)(msg.build()), (0, $e067bf8464469c40$export$fc336dbfaf62f18f)("\n"));
+                const frame = (0, $2ca61125e20d0719$export$ee1b3e54f0441b22)((0, $2ca61125e20d0719$export$fc336dbfaf62f18f)("\nNAOS!"), (0, $2ca61125e20d0719$export$37cc283d8fbd3462)(msg.build()), (0, $2ca61125e20d0719$export$fc336dbfaf62f18f)("\n"));
                 await new Promise((resolve, reject)=>{
                     port.write(frame, (err)=>{
                         if (err) reject(err);
@@ -447,7 +447,7 @@ class $f66c96516db2d95d$export$875c5c6cbf01e2d8 {
                 });
             }
         };
-        this.ch = new (0, $62601aee01789b1f$export$cfdacaa37f9b4dd7)(transport, this, 1, ()=>{
+        this.ch = new (0, $9a7b3fff498b06de$export$cfdacaa37f9b4dd7)(transport, this, 1, ()=>{
             this.ch = null;
         });
         return this.ch;
@@ -455,5 +455,5 @@ class $f66c96516db2d95d$export$875c5c6cbf01e2d8 {
 }
 
 
-export {$f66c96516db2d95d$export$9771b2cde0fbddb8 as serialList, $f66c96516db2d95d$export$875c5c6cbf01e2d8 as NodeSerialDevice};
+export {$5f28838d576d079d$export$9771b2cde0fbddb8 as serialList, $5f28838d576d079d$export$875c5c6cbf01e2d8 as NodeSerialDevice};
 //# sourceMappingURL=serial-node.js.map
