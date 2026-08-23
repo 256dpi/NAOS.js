@@ -543,6 +543,102 @@ class $9224a2c5eeae1672$export$926ab273976713de {
 }
 
 
+var $350ef2af30b2fe60$exports = {};
+
+$parcel$export($350ef2af30b2fe60$exports, "ConnectDevice", () => $350ef2af30b2fe60$export$39e4bc4a07f742fb);
+$parcel$export($350ef2af30b2fe60$exports, "connectList", () => $350ef2af30b2fe60$export$d3acf549cf21dd3c);
+
+const $350ef2af30b2fe60$var$version = 0x1;
+const $350ef2af30b2fe60$var$cmdMsg = 0x0;
+class $350ef2af30b2fe60$export$39e4bc4a07f742fb {
+    constructor(url, token = ""){
+        this.ch = null;
+        // store URL and token
+        this.url = url;
+        this.token = token;
+    }
+    id() {
+        return "connect/" + this.url.replace(/^wss?:\/\//, "");
+    }
+    type() {
+        return "Connect";
+    }
+    name() {
+        return "Unnamed";
+    }
+    async open() {
+        // check channel
+        if (this.ch) throw new Error("channel already open");
+        // append token as query parameter
+        let url = this.url;
+        if (this.token) url += (url.includes("?") ? "&" : "?") + "token=" + encodeURIComponent(this.token);
+        // create socket
+        const socket = new WebSocket(url, "naos");
+        socket.binaryType = "arraybuffer";
+        // await connection
+        await new Promise((resolve, reject)=>{
+            socket.onopen = ()=>resolve();
+            socket.onerror = ()=>{
+                // close the half-open socket before failing, otherwise it lingers
+                socket.close();
+                reject(new Error("failed to open socket"));
+            };
+        });
+        const transport = {
+            start: (onData, onClose)=>{
+                socket.onmessage = (event)=>{
+                    // check frame header
+                    const frame = new Uint8Array(event.data);
+                    if (frame.length < 2 || frame[0] !== $350ef2af30b2fe60$var$version || frame[1] !== $350ef2af30b2fe60$var$cmdMsg) {
+                        socket.close();
+                        return;
+                    }
+                    // parse message
+                    const msg = (0, $99f74415292121e0$export$f69c19e57285b83a).parse(frame.slice(2));
+                    if (msg) onData(msg);
+                };
+                socket.onclose = ()=>{
+                    onClose();
+                };
+                socket.onerror = ()=>{
+                    onClose();
+                };
+            },
+            write: async (msg)=>{
+                // frame message
+                const data = msg.build();
+                const frame = new Uint8Array(2 + data.length);
+                frame[0] = $350ef2af30b2fe60$var$version;
+                frame[1] = $350ef2af30b2fe60$var$cmdMsg;
+                frame.set(data, 2);
+                // write frame
+                socket.send(frame);
+            },
+            close: async ()=>{
+                socket.close();
+            }
+        };
+        this.ch = new (0, $99f74415292121e0$export$cfdacaa37f9b4dd7)(transport, this, 10, ()=>{
+            this.ch = null;
+        });
+        return this.ch;
+    }
+}
+async function $350ef2af30b2fe60$export$d3acf549cf21dd3c(url, token = "") {
+    // prepare headers
+    const headers = {};
+    if (token) headers["Authorization"] = "Bearer " + token;
+    // perform request
+    const res = await fetch(url, {
+        headers: headers
+    });
+    if (!res.ok) throw new Error("unexpected status: " + res.status);
+    // parse response
+    const out = await res.json();
+    return out.devices ?? [];
+}
+
+
 var $e7d69bb808fab13a$exports = {};
 
 $parcel$export($e7d69bb808fab13a$exports, "checkCoredump", () => $e7d69bb808fab13a$export$ccbf702e39e5c28d);
@@ -1861,5 +1957,5 @@ async function $e1163a73e33a3ccf$export$722fbec263ad908a(session, data, report, 
 
 
 
-export {$aa9ad2c21d2bf2d7$export$3ed79f77b3338468 as authStatus, $aa9ad2c21d2bf2d7$export$92cac5b0a55d7f50 as authProvision, $aa9ad2c21d2bf2d7$export$4d11934c049ffae2 as authDescribe, $aa9ad2c21d2bf2d7$export$db2de38840edd6a5 as authAttest, $9224a2c5eeae1672$export$b699ee72de2ebcbd as bleRequest, $9224a2c5eeae1672$export$926ab273976713de as BLEDevice, $e7d69bb808fab13a$export$ccbf702e39e5c28d as checkCoredump, $e7d69bb808fab13a$export$197b71d4e34c9ea3 as readCoredump, $e7d69bb808fab13a$export$56b3ad8bf7c85b76 as deleteCoredump, $e7d69bb808fab13a$export$29c260b0529fb76 as streamLog, $99f74415292121e0$export$3dc07afe418952bc as Queue, $99f74415292121e0$export$f69c19e57285b83a as Message, $99f74415292121e0$export$cfdacaa37f9b4dd7 as Channel, $99f74415292121e0$export$aafa59e2e03f2942 as read, $189005054305d286$export$3cc322771f0aca5b as statPath, $189005054305d286$export$d00618d8d97ebf68 as listDir, $189005054305d286$export$72c04af63de9061a as readFile, $189005054305d286$export$ec88705ee4409f46 as readFileRange, $189005054305d286$export$552bfb764b5cd2b4 as writeFile, $189005054305d286$export$e355e6d7686ffc32 as renamePath, $189005054305d286$export$5c4e774b0e27d36b as removePath, $189005054305d286$export$3b8a92549237260e as sha256File, $189005054305d286$export$aa9bab72412f5613 as makePath, $d41f8f42b7b1f821$export$a947a71ad4d6575 as HTTPDevice, $eb2d9580c7f35431$export$86abcda9a311d473 as ManagedDevice, $8d0624ae1e205836$export$70d6e7a2b8980af6 as MetricKind, $8d0624ae1e205836$export$777f07137a9ea427 as MetricType, $8d0624ae1e205836$export$fdc72cc32fab8771 as listMetrics, $8d0624ae1e205836$export$73d94888757c6215 as describeMetric, $8d0624ae1e205836$export$eeadd579e8255396 as readMetrics, $8d0624ae1e205836$export$f256fc0d3bd6d2ee as readLongMetrics, $8d0624ae1e205836$export$8b987d10383d7b6c as readFloatMetrics, $8d0624ae1e205836$export$c30d31b1766da0ac as readDoubleMetrics, $50b2a1fcb8a69e99$export$426dc07f493a4c47 as ParamType, $50b2a1fcb8a69e99$export$e64bf06489774cd7 as ParamMode, $50b2a1fcb8a69e99$export$ecf541e09a511845 as getParam, $50b2a1fcb8a69e99$export$260ce70ca30cd65 as setParam, $50b2a1fcb8a69e99$export$2428fb4221ce57da as listParams, $50b2a1fcb8a69e99$export$a44436b1b8efd60b as readParam, $50b2a1fcb8a69e99$export$eb49a0586a768c1b as writeParam, $50b2a1fcb8a69e99$export$bf720df32fb7816d as collectParams, $50b2a1fcb8a69e99$export$8ec074d96e3cb6b5 as clearParam, $89603ac6c30e3b84$export$c24e73273208a9bb as AsyncQueue, $668c9db91c0d9266$export$24d523b42850480e as relayCollect, $668c9db91c0d9266$export$6873a5dba9ec288a as relayLink, $668c9db91c0d9266$export$b56a09beaeb45da4 as relaySend, $668c9db91c0d9266$export$26fd734c1398e7f7 as relayReceive, $668c9db91c0d9266$export$1ff2b8f5c3b1fa7d as RelayDevice, $f1b85200f32d8427$export$989790aac965fb4 as serialRequest, $f1b85200f32d8427$export$61b0d7921fd6a089 as SerialDevice, $5f0bc7af558cc661$export$96e9906d6d93a972 as Status, $5f0bc7af558cc661$export$1fb4852a55678982 as Session, $8c9db5ad3a7218fd$export$1428f42a7de81803 as getTime, $8c9db5ad3a7218fd$export$e5d5e1c1822b6e56 as setTime, $8c9db5ad3a7218fd$export$5c5047d260d2b2e4 as getTimeInfo, $e1163a73e33a3ccf$export$722fbec263ad908a as update, $fab42eb3dee39b5b$export$fc336dbfaf62f18f as toBuffer, $fab42eb3dee39b5b$export$f84e8e69fd4488a5 as toString, $fab42eb3dee39b5b$export$37cc283d8fbd3462 as toBase64, $fab42eb3dee39b5b$export$c537b38001c583b7 as fromBase64, $fab42eb3dee39b5b$export$ee1b3e54f0441b22 as concat, $fab42eb3dee39b5b$export$4385e60b38654f68 as random, $fab42eb3dee39b5b$export$66b0e5ed4f34432a as secureRandom, $fab42eb3dee39b5b$export$e10eb67e19628714 as hmac256, $fab42eb3dee39b5b$export$dd4f63edb9ba1490 as requestFile, $fab42eb3dee39b5b$export$2a703dbb0cb35339 as pack, $fab42eb3dee39b5b$export$9bcaddb313b2c51f as toView, $fab42eb3dee39b5b$export$417857010dc9287f as unpack, $fab42eb3dee39b5b$export$398604a469f7de9a as compare};
+export {$aa9ad2c21d2bf2d7$export$3ed79f77b3338468 as authStatus, $aa9ad2c21d2bf2d7$export$92cac5b0a55d7f50 as authProvision, $aa9ad2c21d2bf2d7$export$4d11934c049ffae2 as authDescribe, $aa9ad2c21d2bf2d7$export$db2de38840edd6a5 as authAttest, $9224a2c5eeae1672$export$b699ee72de2ebcbd as bleRequest, $9224a2c5eeae1672$export$926ab273976713de as BLEDevice, $350ef2af30b2fe60$export$39e4bc4a07f742fb as ConnectDevice, $350ef2af30b2fe60$export$d3acf549cf21dd3c as connectList, $e7d69bb808fab13a$export$ccbf702e39e5c28d as checkCoredump, $e7d69bb808fab13a$export$197b71d4e34c9ea3 as readCoredump, $e7d69bb808fab13a$export$56b3ad8bf7c85b76 as deleteCoredump, $e7d69bb808fab13a$export$29c260b0529fb76 as streamLog, $99f74415292121e0$export$3dc07afe418952bc as Queue, $99f74415292121e0$export$f69c19e57285b83a as Message, $99f74415292121e0$export$cfdacaa37f9b4dd7 as Channel, $99f74415292121e0$export$aafa59e2e03f2942 as read, $189005054305d286$export$3cc322771f0aca5b as statPath, $189005054305d286$export$d00618d8d97ebf68 as listDir, $189005054305d286$export$72c04af63de9061a as readFile, $189005054305d286$export$ec88705ee4409f46 as readFileRange, $189005054305d286$export$552bfb764b5cd2b4 as writeFile, $189005054305d286$export$e355e6d7686ffc32 as renamePath, $189005054305d286$export$5c4e774b0e27d36b as removePath, $189005054305d286$export$3b8a92549237260e as sha256File, $189005054305d286$export$aa9bab72412f5613 as makePath, $d41f8f42b7b1f821$export$a947a71ad4d6575 as HTTPDevice, $eb2d9580c7f35431$export$86abcda9a311d473 as ManagedDevice, $8d0624ae1e205836$export$70d6e7a2b8980af6 as MetricKind, $8d0624ae1e205836$export$777f07137a9ea427 as MetricType, $8d0624ae1e205836$export$fdc72cc32fab8771 as listMetrics, $8d0624ae1e205836$export$73d94888757c6215 as describeMetric, $8d0624ae1e205836$export$eeadd579e8255396 as readMetrics, $8d0624ae1e205836$export$f256fc0d3bd6d2ee as readLongMetrics, $8d0624ae1e205836$export$8b987d10383d7b6c as readFloatMetrics, $8d0624ae1e205836$export$c30d31b1766da0ac as readDoubleMetrics, $50b2a1fcb8a69e99$export$426dc07f493a4c47 as ParamType, $50b2a1fcb8a69e99$export$e64bf06489774cd7 as ParamMode, $50b2a1fcb8a69e99$export$ecf541e09a511845 as getParam, $50b2a1fcb8a69e99$export$260ce70ca30cd65 as setParam, $50b2a1fcb8a69e99$export$2428fb4221ce57da as listParams, $50b2a1fcb8a69e99$export$a44436b1b8efd60b as readParam, $50b2a1fcb8a69e99$export$eb49a0586a768c1b as writeParam, $50b2a1fcb8a69e99$export$bf720df32fb7816d as collectParams, $50b2a1fcb8a69e99$export$8ec074d96e3cb6b5 as clearParam, $89603ac6c30e3b84$export$c24e73273208a9bb as AsyncQueue, $668c9db91c0d9266$export$24d523b42850480e as relayCollect, $668c9db91c0d9266$export$6873a5dba9ec288a as relayLink, $668c9db91c0d9266$export$b56a09beaeb45da4 as relaySend, $668c9db91c0d9266$export$26fd734c1398e7f7 as relayReceive, $668c9db91c0d9266$export$1ff2b8f5c3b1fa7d as RelayDevice, $f1b85200f32d8427$export$989790aac965fb4 as serialRequest, $f1b85200f32d8427$export$61b0d7921fd6a089 as SerialDevice, $5f0bc7af558cc661$export$96e9906d6d93a972 as Status, $5f0bc7af558cc661$export$1fb4852a55678982 as Session, $8c9db5ad3a7218fd$export$1428f42a7de81803 as getTime, $8c9db5ad3a7218fd$export$e5d5e1c1822b6e56 as setTime, $8c9db5ad3a7218fd$export$5c5047d260d2b2e4 as getTimeInfo, $e1163a73e33a3ccf$export$722fbec263ad908a as update, $fab42eb3dee39b5b$export$fc336dbfaf62f18f as toBuffer, $fab42eb3dee39b5b$export$f84e8e69fd4488a5 as toString, $fab42eb3dee39b5b$export$37cc283d8fbd3462 as toBase64, $fab42eb3dee39b5b$export$c537b38001c583b7 as fromBase64, $fab42eb3dee39b5b$export$ee1b3e54f0441b22 as concat, $fab42eb3dee39b5b$export$4385e60b38654f68 as random, $fab42eb3dee39b5b$export$66b0e5ed4f34432a as secureRandom, $fab42eb3dee39b5b$export$e10eb67e19628714 as hmac256, $fab42eb3dee39b5b$export$dd4f63edb9ba1490 as requestFile, $fab42eb3dee39b5b$export$2a703dbb0cb35339 as pack, $fab42eb3dee39b5b$export$9bcaddb313b2c51f as toView, $fab42eb3dee39b5b$export$417857010dc9287f as unpack, $fab42eb3dee39b5b$export$398604a469f7de9a as compare};
 //# sourceMappingURL=main.js.map
